@@ -27,6 +27,7 @@ SENSITIVE_CONFIG_MARKERS = (
     "picBedToken:",
     "图床核心配置",
 )
+TEXT_SUFFIXES = {".css", ".json", ".md", ".mjs", ".py", ".ts", ".tsx", ".txt"}
 
 
 def _as_path(value: str | os.PathLike[str]) -> Path:
@@ -115,7 +116,9 @@ def _files_match(source: Path, destination: Path, override: bytes | None) -> boo
     if not destination.is_file():
         return False
     if override is not None:
-        return destination.read_bytes() == override
+        return destination.read_text(encoding="utf-8") == override.decode("utf-8")
+    if source.suffix.lower() in TEXT_SUFFIXES:
+        return source.read_text(encoding="utf-8") == destination.read_text(encoding="utf-8")
     return filecmp.cmp(source, destination, shallow=False)
 
 

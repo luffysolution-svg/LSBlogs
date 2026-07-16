@@ -1,31 +1,21 @@
 from fastapi import APIRouter, Body
-import os
 import re
 import json
+from pathlib import Path
 from typing import Dict, Any
+
+from cms_core.api.sync import require_active_blog_path
+from cms_core.blog_content import atomic_write_text
 
 router = APIRouter()
 
-# ---------------------------------------------------------
-# 🛠️ 寻址引擎：物理锁死 Manager 本地根目录！(终极修复版)
-# ---------------------------------------------------------
-CURRENT_API_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_API_DIR, "..", ".."))
-
 
 def get_config_path():
-    possible_paths = [
-        os.path.join(PROJECT_ROOT, 'siteConfig.ts'),
-        os.path.join(PROJECT_ROOT, 'src', 'siteConfig.ts'),
-        os.path.join(os.path.dirname(CURRENT_API_DIR), 'siteConfig.ts')
-    ]
-
-    for p in possible_paths:
-        if os.path.exists(p):
-            return p
-
-    print(f"❌ 警告：在 Manager 目录未找到 siteConfig.ts！正在搜索的根目录是: {PROJECT_ROOT}")
-    return None
+    try:
+        path = require_active_blog_path() / "siteConfig.ts"
+        return str(path) if path.is_file() else None
+    except ValueError:
+        return None
 
 
 def dict_to_ts_string(data, indent=2):
@@ -74,6 +64,15 @@ def get_site_config():
 
                 parsed_config[dict_name] = sub_dict
 
+        for list_name in ['themeColors', 'bgImages', 'cloudMusicIds', 'danmakuList', 'footerBadges']:
+            list_match = re.search(rf'{list_name}\s*:\s*(\[[\s\S]*?\])\s*,', content)
+            if list_match:
+                try:
+                    parsed_config[list_name] = json.loads(list_match.group(1))
+                    root_content = root_content.replace(list_match.group(0), '')
+                except json.JSONDecodeError:
+                    pass
+
         # 2. 🌟 核心升级：提取外层基础变量（现在支持 字符串、布尔值、数字！）
         for match in re.finditer(r'([a-zA-Z0-9_]+)\s*:\s*(?:(["\'])([\s\S]*?)\2|(true|false|\d+))', root_content):
             key = match.group(1)
@@ -111,8 +110,8 @@ def update_site_config(payload: Dict[str, Any] = Body(...)):
     VALID_ROOT_KEYS = {
         "title", "authorName", "bio", "avatarUrl", "useGradient", "themeColors",
         "bgImages", "defaultPostCover", "photoWallImage", "cloudMusicIds", "social",
-        "counts", "chatterTitle", "chatterDescription", "picBedName", "picBedUrl",
-        "picBedToken", "danmakuList", "githubComments", "buildDate", "footerBadges",
+        "counts", "chatterTitle", "chatterDescription", "danmakuList",
+        "githubComments", "buildDate", "footerBadges",
         "icpConfig", "geminiConfig",
         "faviconUrl",
         "navTitle",
@@ -162,13 +161,12 @@ def update_site_config(payload: Dict[str, Any] = Body(...)):
                 updated_count += 1
 
         # 写入物理磁盘
-        with open(config_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+        atomic_write_text(Path(config_path), content)
 
         print(f"🔥 任务圆满完成，共刷新 {updated_count} 个字段")
         print("=" * 50 + "\n")
 
-        return {"success": True, "message": "本地 siteConfig.ts 修改成功！"}
+        return {"success": True, "message": "正式博客 siteConfig.ts 修改成功！"}
 
     except Exception as e:
         print(f"❌ 物理写入发生灾难性错误: {str(e)}")

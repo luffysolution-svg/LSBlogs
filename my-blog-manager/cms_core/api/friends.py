@@ -1,13 +1,22 @@
-import os
 import json
+from pathlib import Path
 from fastapi import APIRouter, Request
+
+from cms_core.api.sync import require_active_blog_path
+from cms_core.blog_content import atomic_write_text, read_typescript_array
 
 router = APIRouter()
 
-# 🌟 动态寻址逻辑
-CURRENT_API_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_API_DIR, "..", ".."))
-FRIENDS_TS_PATH = os.path.join(PROJECT_ROOT, "data", "friends.ts")
+def get_friends_path() -> Path:
+    return require_active_blog_path() / "data" / "friends.ts"
+
+
+@router.get("/get")
+async def get_friends():
+    try:
+        return {"success": True, "friends": read_typescript_array(get_friends_path(), "friendsData")}
+    except Exception as exc:
+        return {"success": False, "message": f"读取正式博客友链失败: {exc}"}
 
 
 @router.post("/sync")
@@ -27,9 +36,7 @@ async def sync_friends(request: Request):
         )
 
         # 3. 物理落盘
-        os.makedirs(os.path.dirname(FRIENDS_TS_PATH), exist_ok=True)
-        with open(FRIENDS_TS_PATH, "w", encoding="utf-8") as f:
-            f.write(ts_content)
+        atomic_write_text(get_friends_path(), ts_content)
 
         return {"success": True, "message": f"✨ 友链物理文件已更新！共同步 {len(friends_list)} 位好友。"}
     except Exception as e:

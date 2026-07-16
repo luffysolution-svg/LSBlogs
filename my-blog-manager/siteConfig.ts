@@ -40,9 +40,6 @@ export const siteConfig = {
   },
   chatterTitle: "碎片记录",
   chatterDescription: "代码之外的灵感、日常与收藏",
-  picBedName: "图床",
-  picBedUrl: "",
-  picBedToken: "",
   danmakuList: [],
   githubComments: {
     repo: "",

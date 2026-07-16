@@ -67,6 +67,7 @@ export default function Navbar() {
 
   // 🌟 这里新增了 /tree 路由
   const navLinks = [
+    { name: '管理台', href: '/admin' },
     { name: '首页', href: '/' },
     { name: '项目', href: '/projects' },
     { name: '归档', href: '/timeline' },
@@ -114,27 +115,28 @@ export default function Navbar() {
         for (const op of operations) {
           let apiUrl = '';
           let body = {};
+          const payload = op.payload as any;
 
           switch (op.type) {
             case 'sync_photowall':
               apiUrl = `${apiBase}/api/gallery/sync`;
-              body = { albums: op.value };
+              body = { albums: payload };
               break;
             case 'sync_friends':
               apiUrl = `${apiBase}/api/friends/sync`;
-              body = { friends: op.value };
+              body = { friends: payload };
               break;
             case 'sync_projects':
               apiUrl = `${apiBase}/api/projects/sync`;
-              body = { projects: op.value };
+              body = { projects: payload };
               break;
             case 'CONFIG':
               apiUrl = `${apiBase}/api/config/update`;
-              body = { updates: op.payload };
+              body = { updates: payload };
               break;
             case 'create_moment':
               apiUrl = `${apiBase}/api/moments/save`;
-              body = op.payload;
+              body = payload;
               break;
             default:
               apiUrl = `${apiBase}/api/drafts/sync_local`;

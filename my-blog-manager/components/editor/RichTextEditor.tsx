@@ -187,7 +187,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, EditorProps>(({ title, s
     if (!editor || !initialContent) return;
     if (loadedContentRef.current !== initialContent) {
       const safeContent = initialContent.replace(/~~([\s\S]*?)~~/g, '<s>$1</s>');
-      editor.commands.setContent(safeContent, false);
+      editor.commands.setContent(safeContent, { emitUpdate: false });
       loadedContentRef.current = initialContent;
     }
   }, [editor, initialContent]);

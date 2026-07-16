@@ -1,18 +1,22 @@
-import os
 import json
+from pathlib import Path
 from fastapi import APIRouter, Request
+
+from cms_core.api.sync import require_active_blog_path
+from cms_core.blog_content import atomic_write_text, read_typescript_array
 
 router = APIRouter()
 
-# 🌟 核心修复：动态获取项目根目录
-# __file__ 是当前文件的绝对路径
-# os.path.dirname(__file__) 是 cms_core/api/
-# 再向上两级就是项目根目录 my-blog-manager/
-CURRENT_API_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_API_DIR, "..", ".."))
+def get_albums_path() -> Path:
+    return require_active_blog_path() / "data" / "albums.ts"
 
-# 🌟 根据你提供的位置，目标文件在项目根目录下的 data/albums.ts
-ALBUMS_TS_PATH = os.path.join(PROJECT_ROOT, "data", "albums.ts")
+
+@router.get("/get")
+async def get_gallery():
+    try:
+        return {"success": True, "albums": read_typescript_array(get_albums_path(), "albums")}
+    except Exception as exc:
+        return {"success": False, "message": f"读取正式博客相册失败: {exc}"}
 
 
 @router.post("/sync")
@@ -40,9 +44,7 @@ async def sync_gallery(request: Request):
         )
 
         # 3. 确保目录存在并执行覆盖写入
-        os.makedirs(os.path.dirname(ALBUMS_TS_PATH), exist_ok=True)
-        with open(ALBUMS_TS_PATH, "w", encoding="utf-8") as f:
-            f.write(ts_content)
+        atomic_write_text(get_albums_path(), ts_content)
 
         return {
             "success": True,
@@ -57,7 +59,6 @@ async def sync_gallery(request: Request):
 async def debug_path():
     """用于检查当前后端锁定的物理路径"""
     return {
-        "project_root": PROJECT_ROOT,
-        "target_file": ALBUMS_TS_PATH,
-        "exists": os.path.exists(ALBUMS_TS_PATH)
+        "target_file": str(get_albums_path()),
+        "exists": get_albums_path().exists()
     }

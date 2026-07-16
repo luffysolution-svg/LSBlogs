@@ -59,7 +59,7 @@ export default function ChatterBoard({ chatters: initialChatters }: { chatters: 
       const res = await fetch(`http://127.0.0.1:${config.api_port}/api/drafts/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: slug }) // 这里传的是 slug (即 md 的文件名)
+        body: JSON.stringify({ id: slug, type: 'chatter', scope: 'published' })
       });
 
       const data = await res.json();

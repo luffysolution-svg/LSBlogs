@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BackButton from '../../components/BackButton';
 import { projectsData as initialProjects, Project } from '../../data/projects';
@@ -15,6 +15,24 @@ export default function ProjectsBoard() {
   // 1. 核心状态
   const [editableProjects, setEditableProjects] = useState<Project[]>(initialProjects);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    const loadProjects = async () => {
+      try {
+        const configResponse = await fetch(`/backend_config.json?t=${Date.now()}`);
+        const backendConfig = await configResponse.json();
+        const response = await fetch(`http://127.0.0.1:${backendConfig.api_port}/api/projects/get`);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        if (active && Array.isArray(data.projects)) setEditableProjects(data.projects);
+      } catch (error) {
+        if (active) showToast(error instanceof Error ? error.message : '无法读取正式博客项目', 'error');
+      }
+    };
+    loadProjects();
+    return () => { active = false; };
+  }, [showToast]);
 
   // 2. 弹窗状态
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; name: string | null }>({ isOpen: false, id: null, name: null });
@@ -34,10 +52,10 @@ export default function ProjectsBoard() {
   // --- 核心逻辑：加入暂存队列 ---
   const syncToQueue = (nextList: Project[]) => {
     addOperation({
-      id: `sync_projects_${Date.now()}`,
       type: "sync_projects",
       label: "同步项目矩阵变更",
-      value: nextList
+      description: "将项目数据写入正式博客",
+      payload: nextList
     });
     showToast("📍 变更已加入待处理队列，请在 Navbar 点击更新本地", "info");
   };

@@ -30,6 +30,24 @@ export default function PhotoWallPage() {
   const { showToast } = useToast();
   const [editableAlbums, setEditableAlbums] = useState<Album[]>(initialAlbums);
 
+  useEffect(() => {
+    let active = true;
+    const loadAlbums = async () => {
+      try {
+        const configResponse = await fetch(`/backend_config.json?t=${Date.now()}`);
+        const backendConfig = await configResponse.json();
+        const response = await fetch(`http://127.0.0.1:${backendConfig.api_port}/api/gallery/get`);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        if (active && Array.isArray(data.albums)) setEditableAlbums(data.albums);
+      } catch (error) {
+        if (active) showToast(error instanceof Error ? error.message : '无法读取正式博客相册', 'error');
+      }
+    };
+    loadAlbums();
+    return () => { active = false; };
+  }, [showToast]);
+
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'album' | 'photo'; id?: string; photoIndex?: number; title: string }>({ isOpen: false, type: 'album', title: '' });
   const [albumModal, setAlbumModal] = useState<{ isOpen: boolean; mode: 'add' | 'edit'; data: any }>({ isOpen: false, mode: 'add', data: {} });
   const [photoModal, setPhotoModal] = useState<{ isOpen: boolean; mode: 'add' | 'edit'; index?: number; data: any }>({ isOpen: false, mode: 'add', data: {} });
@@ -39,10 +57,10 @@ export default function PhotoWallPage() {
 
   const syncToQueue = (newAlbums: Album[]) => {
     addOperation({
-      id: `photowall_sync_${Date.now()}`,
       type: "sync_photowall",
       label: "同步画廊数据变更",
-      value: newAlbums
+      description: "将相册数据写入正式博客",
+      payload: newAlbums
     });
     showToast("📍 变更已加入待处理队列，请在 Navbar 点击更新本地", "info");
   };

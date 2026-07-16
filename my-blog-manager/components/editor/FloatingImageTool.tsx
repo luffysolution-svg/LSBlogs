@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ToastProvider';
-import { siteConfig } from '../../siteConfig';
 
 interface FloatingImageToolProps {
   isOpen: boolean;
@@ -22,14 +21,6 @@ export default function FloatingImageTool({ isOpen, onClose, onInsert }: Floatin
 
   // 处理文件上传逻辑 (保持不变)
   const handleFileUpload = async (file: File) => {
-    const picUrl = (siteConfig as any).picBedUrl || "https://pic.dusays.com";
-    const picToken = (siteConfig as any).picBedToken;
-
-    if (!picToken) {
-      showToast("未配置图床 Token！", "error");
-      return;
-    }
-
     setIsUploading(true);
     showToast("正在将图片传送至云端...", "success");
 
@@ -38,8 +29,6 @@ export default function FloatingImageTool({ isOpen, onClose, onInsert }: Floatin
       const configData = await configRes.json();
       const uploadData = new FormData();
       uploadData.append('file', file);
-      uploadData.append('url', picUrl);
-      uploadData.append('token', picToken);
 
       const res = await fetch(`http://127.0.0.1:${configData.api_port}/api/picbed/upload`, {
         method: 'POST',

@@ -34,13 +34,6 @@ export default function BackgroundSection({ formData, handleUpdate, pushToQueue 
 
   // 【核心功能】：真实的图床上传逻辑
   const handleFileUpload = async (file: File) => {
-    const picUrl = formData.picBedUrl || "https://pic.dusays.com";
-    const picToken = formData.picBedToken;
-
-    if (!picToken) {
-      showToast("⛔ 无法上传！请先在【图库配置管理】中填写图床 Token", "error");
-      return;
-    }
     if (!file.type.startsWith('image/')) {
       showToast("只能上传图片文件哦！", "warning");
       return;
@@ -56,8 +49,6 @@ export default function BackgroundSection({ formData, handleUpdate, pushToQueue 
       // 构建 multipart/form-data
       const uploadData = new FormData();
       uploadData.append('file', file);
-      uploadData.append('url', picUrl);
-      uploadData.append('token', picToken);
 
       const res = await fetch(`http://127.0.0.1:${configData.api_port}/api/picbed/upload`, {
         method: 'POST',

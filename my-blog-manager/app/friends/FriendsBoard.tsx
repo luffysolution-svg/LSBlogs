@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import BackButton from '../../components/BackButton';
 import { friendsData as initialFriends, Friend } from '../../data/friends';
 import { Plus, Pencil, Trash2, AlertTriangle, Save, Edit3, X, CloudUpload, Sparkles } from 'lucide-react';
@@ -13,12 +13,12 @@ import FloatingImageTool from '../../components/editor/FloatingImageTool';
 import Comments from '../../components/Comments';
 import { siteConfig } from '../../siteConfig';
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 30, scale: 0.9 },
   show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
@@ -28,6 +28,24 @@ export default function FriendsBoard() {
   const { showToast } = useToast();
 
   const [editableFriends, setEditableFriends] = useState<Friend[]>(initialFriends);
+
+  useEffect(() => {
+    let active = true;
+    const loadFriends = async () => {
+      try {
+        const configResponse = await fetch(`/backend_config.json?t=${Date.now()}`);
+        const backendConfig = await configResponse.json();
+        const response = await fetch(`http://127.0.0.1:${backendConfig.api_port}/api/friends/get`);
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        if (active && Array.isArray(data.friends)) setEditableFriends(data.friends);
+      } catch (error) {
+        if (active) showToast(error instanceof Error ? error.message : '无法读取正式博客友链', 'error');
+      }
+    };
+    loadFriends();
+    return () => { active = false; };
+  }, [showToast]);
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null; name: string | null }>({ isOpen: false, id: null, name: null });
   const [friendModal, setFriendModal] = useState<{ isOpen: boolean; mode: 'add' | 'edit'; data: Partial<Friend> }>({ isOpen: false, mode: 'add', data: {} });
@@ -45,10 +63,10 @@ export default function FriendsBoard() {
 
   const syncToQueue = (nextList: Friend[]) => {
     addOperation({
-      id: `sync_friends_${Date.now()}`,
       type: "sync_friends",
       label: "同步友链数据变更",
-      value: nextList
+      description: "将友链列表写入正式博客",
+      payload: nextList
     });
     showToast("📍 变更已加入待处理队列，请在 Navbar 点击更新本地", "info");
   };

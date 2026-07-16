@@ -1,33 +1,61 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-// 定义操作的类型
-export type OperationType = 'POST' | 'CHATTER' | 'CONFIG' | 'GALLERY' | 'FRIEND';
+export type OperationType =
+  | 'publish_article'
+  | 'sync_photowall'
+  | 'sync_friends'
+  | 'sync_projects'
+  | 'CONFIG'
+  | 'create_moment';
 
 export interface Operation {
   id: string;
   type: OperationType;
-  label: string;      // 显示在列表里的简短描述，如 "修改文章：GNN研究"
-  description: string; // 详细描述
+  label: string;
+  description?: string;
   timestamp: string;
-  payload: any;       // 实际要修改的数据内容
+  payload: unknown;
 }
+
+export type NewOperation = Omit<Operation, 'id' | 'timestamp'>;
 
 interface OperationContextType {
   operations: Operation[];
-  addOperation: (op: Omit<Operation, 'id' | 'timestamp'>) => void;
+  addOperation: (op: NewOperation) => void;
   removeOperation: (id: string) => void;
   clearOperations: () => void;
 }
 
 const OperationContext = createContext<OperationContextType | undefined>(undefined);
+const STORAGE_KEY = 'lsblogs-manager-operations-v1';
 
 export function OperationProvider({ children }: { children: React.ReactNode }) {
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setOperations(parsed);
+      }
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } finally {
+      setHasLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(operations));
+  }, [hasLoaded, operations]);
 
   // 添加操作（如果同类型的操作已存在，则覆盖，防止重复积攒）
-  const addOperation = (op: Omit<Operation, 'id' | 'timestamp'>) => {
+  const addOperation = (op: NewOperation) => {
     const newOp: Operation = {
       ...op,
       id: Math.random().toString(36).substr(2, 9),

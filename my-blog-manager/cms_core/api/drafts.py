@@ -8,6 +8,9 @@ import re
 import markdown  # 确保你已经安装了 markdown 库 (pip install markdown)
 from markdownify import markdownify as md
 
+from cms_core.api.sync import require_active_blog_path
+from cms_core.blog_content import atomic_write_text, content_path, normalize_document_id
+
 router = APIRouter()
 
 # 🌟 终极物理锁死防线：绝对定位到 my-blog-manager 根目录，无视任何全局目录切换！
@@ -90,10 +93,8 @@ async def get_draft(request: Request):
     except Exception:
         return {"success": False, "message": "JSON 解析失败"}
 
-    raw_id = payload.get("id", "").replace(".md", "")
+    raw_id = normalize_document_id(payload.get("id", ""), str(payload.get("type", "post")))
     doc_type = payload.get("type", "post")
-    # 🌟 修复：用 PROJECT_ROOT 替换 os.getcwd()
-    base_dir = PROJECT_ROOT
     drafts_dir = get_manager_drafts_dir()
 
     # 1. 优先从草稿箱读取 JSON
@@ -105,10 +106,9 @@ async def get_draft(request: Request):
     # 2. 如果没有草稿，从物理 MD 文件读取并解析
     target_md = None
     if raw_id == "about" or doc_type == "about":
-        target_md = os.path.join(base_dir, "app", "about", "about.md")
+        target_md = str(content_path("about", "about"))
     else:
-        folder = "posts" if doc_type == "post" else "chatters"
-        target_md = os.path.join(base_dir, folder, f"{raw_id}.md")
+        target_md = str(content_path(doc_type, raw_id))
 
     if target_md and os.path.exists(target_md):
         try:
@@ -165,16 +165,14 @@ async def delete_draft(request: Request):
     except Exception:
         return {"success": False, "message": "JSON 解析失败"}
 
-    raw_id = payload.get("id", "").replace(".md", "").replace(".json", "")
-    # 🌟 修复：用 PROJECT_ROOT 替换 os.getcwd()
-    base_dir = PROJECT_ROOT
+    doc_type = str(payload.get("type", "post"))
+    raw_id = normalize_document_id(payload.get("id", ""), doc_type)
+    scope = str(payload.get("scope", "draft"))
     drafts_dir = get_manager_drafts_dir()
 
-    possible_paths = [
-        os.path.join(drafts_dir, f"{raw_id}.json"),
-        os.path.join(base_dir, "posts", f"{raw_id}.md"),
-        os.path.join(base_dir, "chatters", f"{raw_id}.md")
-    ]
+    possible_paths = [os.path.join(drafts_dir, f"{raw_id}.json")]
+    if scope == "published":
+        possible_paths = [str(content_path(doc_type, raw_id))]
 
     deleted_count = 0
     for p in possible_paths:
@@ -194,20 +192,16 @@ async def delete_draft(request: Request):
 async def sync_local_operations(request: Request):
     payload = await request.json()
     operations = payload.get("operations", [])
-    # 🌟 修复：用 PROJECT_ROOT 替换 os.getcwd()
-    base_dir = PROJECT_ROOT
     drafts_dir = get_manager_drafts_dir()
     results = []
 
     for op in operations:
         if op.get("type") == "publish_article":
-            data = op.get("value", {})
+            data = op.get("payload", op.get("value", {}))
             doc_type = data.get("type", "post")
             doc_id = data.get("id", "")
 
-            final_id = doc_id
-            if not final_id or final_id == 'new':
-                final_id = f"{doc_type}_{int(time.time())}"
+            final_id = "about" if doc_type == "about" else normalize_document_id(doc_id, doc_type)
 
             # ==========================================
             # 🌟 核心防吞空行逻辑：在给 markdownify 之前拦截处理 HTML
@@ -252,14 +246,11 @@ async def sync_local_operations(request: Request):
             final_text = f"---\n{yaml.dump(fm, allow_unicode=True, sort_keys=False)}---\n\n{md_content}"
 
             if doc_type == "about":
-                save_path = os.path.join(base_dir, "app", "about", "about.md")
+                save_path = content_path("about", "about")
             else:
-                folder = "posts" if doc_type == "post" else "chatters"
-                save_path = os.path.join(base_dir, folder, f"{final_id}.md")
+                save_path = content_path(doc_type, final_id)
 
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            with open(save_path, "w", encoding="utf-8") as f:
-                f.write(final_text)
+            atomic_write_text(save_path, final_text)
 
             draft_path = os.path.join(drafts_dir, f"{doc_id}.json")
             if os.path.exists(draft_path):
@@ -268,16 +259,15 @@ async def sync_local_operations(request: Request):
                 except:
                     pass
 
-            results.append(f"✅ 已发布: {fm['title']}")
+            results.append(f"✅ 已写入正式博客: {fm['title']}")
 
     return {"success": True, "message": "\n".join(results)}
 
 
 @router.get("/all_tags")
 async def get_all_historical_tags():
-    # 🌟 修复：用 PROJECT_ROOT 替换 os.getcwd()
-    base_dir = PROJECT_ROOT
-    scan_dirs = {"post": os.path.join(base_dir, "posts"), "chatter": os.path.join(base_dir, "chatters")}
+    base_dir = require_active_blog_path()
+    scan_dirs = {"post": str(base_dir / "posts"), "chatter": str(base_dir / "chatters")}
     tag_collections = {"post": set(), "chatter": set()}
     fm_regex = re.compile(r'---\s*\n(.*?)\n---\s*', re.DOTALL)
 

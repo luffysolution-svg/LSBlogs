@@ -139,10 +139,10 @@ function EditorContent() {
 
     if (isPublish) {
       addOperation({
-        id: `publish_${Date.now()}`,
         type: "publish_article",
         label: `发布: ${title || '无标题'}`,
-        value: payload
+        description: '将内容写入正式博客',
+        payload
       });
       setHasUnsavedChanges(false);
       showToast("🚀 已加入待处理队列！", "info");
@@ -159,6 +159,10 @@ function EditorContent() {
       });
       const data = await res.json();
       if (data.success) {
+        if (data.id && currentDocId === 'new') {
+          setCurrentDocId(data.id);
+          router.replace(`/editor?id=${encodeURIComponent(data.id)}&type=${encodeURIComponent(docType)}`);
+        }
         setLastSaved(new Date().toLocaleTimeString());
         setHasUnsavedChanges(false);
         showToast("💾 草稿已落盘", "success");

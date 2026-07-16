@@ -5,7 +5,6 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { MapPin, MessageSquare, Clock, Sparkles, Search, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Plus, Image as ImageIcon, X, Send, Link as LinkIcon, Zap, Trash2, AlertTriangle } from 'lucide-react';
 import MomentComments from '../../components/MomentComments';
 import { useToast } from '../../components/ToastProvider';
-import { siteConfig } from '../../siteConfig';
 import { useOperations } from '../../context/OperationContext';
 
 function timeAgo(dateStr: string) {
@@ -19,6 +18,7 @@ function timeAgo(dateStr: string) {
 }
 
 export default function MomentList({ moments, authorName, avatarUrl }: any) {
+  const [liveMoments, setLiveMoments] = useState<any[]>(moments || []);
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -38,14 +38,31 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  useEffect(() => {
+    const loadMoments = async () => {
+      try {
+        const configRes = await fetch(`/backend_config.json?t=${Date.now()}`);
+        const configData = await configRes.json();
+        const response = await fetch(`http://127.0.0.1:${configData.api_port}/api/content/list`, { cache: 'no-store' });
+        const data = await response.json();
+        if (data.success && Array.isArray(data.items)) {
+          setLiveMoments(data.items.filter((item: any) => item.type === 'moment'));
+        }
+      } catch {
+        // 保留构建时传入的数据作为离线回退。
+      }
+    };
+    loadMoments();
+  }, []);
+
   const processedMoments = useMemo(() => {
-    let baseMoments = moments ? [...moments] : [];
+    const baseMoments = [...liveMoments];
 
     // 拦截并在顶层混合暂缓队列的数据
     const pendingMoments = operations
       .filter(op => op.type === 'create_moment')
       .map(op => ({
-        ...op.payload,
+        ...(op.payload as any),
         opId: op.id,
         isPending: true
       }));
@@ -66,7 +83,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
     });
     return result;
-  }, [moments, searchQuery, sortOrder, operations]);
+  }, [liveMoments, searchQuery, sortOrder, operations]);
 
   const nextImg = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -81,9 +98,6 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const handleFileUpload = async (files: FileList | File[]) => {
-    const picUrl = (siteConfig as any).picBedUrl || "https://pic.dusays.com";
-    const picToken = (siteConfig as any).picBedToken;
-    if (!picToken) { showToast("未配置图床 Token！", "error"); return; }
     setIsUploading(true);
     showToast(`正在上传 ${files.length} 张图片...`, "info");
     try {
@@ -93,8 +107,6 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       for (let i = 0; i < files.length; i++) {
         const uploadData = new FormData();
         uploadData.append('file', files[i]);
-        uploadData.append('url', picUrl);
-        uploadData.append('token', picToken);
         const res = await fetch(`http://127.0.0.1:${configData.api_port}/api/picbed/upload`, {
           method: 'POST',
           body: uploadData,
@@ -143,11 +155,10 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       images: newMoment.images
     };
     addOperation({
-      id: `op-moment-${Date.now()}`,
       type: 'create_moment',
       label: `[发布说说] ${newMoment.content.slice(0, 12)}...`,
-      payload: payload,
-      timestamp: new Date().toLocaleString()
+      description: '将说说写入正式博客',
+      payload
     });
     showToast("✅ 队列保存成功！\n请点击右上角导航栏的 📥 收件箱更新本地", "success");
     setIsPublishOpen(false);
@@ -186,10 +197,10 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
 
       const data = await res.json();
       if (data.success) {
-        showToast("🎉 发布成功！正在刷新...", "success");
+        showToast("🎉 已写入正式博客", "success");
+        setLiveMoments(current => [payload, ...current]);
         setIsPublishOpen(false);
         setNewMoment({ content: '', location: '', images: [] });
-        setTimeout(() => window.location.reload(), 1000);
       } else {
         showToast(`⚠️ 后端拒绝了请求：${data.message}`, "error");
       }
@@ -217,7 +228,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       const data = await res.json();
       if (data.success) {
         showToast("🗑️ 说说已彻底删除", "success");
-        setTimeout(() => window.location.reload(), 1000);
+        setLiveMoments(current => current.filter(moment => moment.id !== deleteConfirmId));
       } else {
         showToast(`删除失败: ${data.message}`, "error");
       }

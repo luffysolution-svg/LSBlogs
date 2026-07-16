@@ -33,7 +33,7 @@ function SettingsContent() {
     cloudMusicIds: [...(siteConfig.cloudMusicIds || [])],
     bgImages: [...(siteConfig.bgImages || [])],
     githubComments: siteConfig.githubComments || {
-      repo: '',
+      repo: 'luffysolution-svg/luffy.github.io',
       label: 'blog-comment'
     },
     danmakuList: [...(siteConfig.danmakuList || [])],
@@ -168,14 +168,10 @@ function SettingsContent() {
 
   const pushToQueue = (label: string, key?: string, value?: any) => {
     addOperation({
-      id: Date.now().toString(),
       type: 'CONFIG',
       label: `配置暂存：${label}`,
-      description: `修改了系统的 ${label}，等待同步至 my-blog`,
-      timestamp: new Date().toLocaleTimeString().slice(0, 5),
-      payload: formData,
-      key: key,
-      value: value
+      description: `修改了系统的 ${label}，等待写入正式博客`,
+      payload: formData
     });
     showToast(`🎉 【${label}】已加入右上角操作队列！`, "success");
   };
@@ -214,8 +210,8 @@ function SettingsContent() {
             </div>
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-4 mt-4">
               <p className="text-xs font-black text-amber-600 dark:text-amber-400 mb-2">🔄 数据中枢操作</p>
-              <button className="w-full py-2 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-bold hover:bg-amber-500 hover:text-white transition-all text-left px-4 flex justify-between">
-                <span>拉取 my-blog 数据</span><span>📥</span>
+              <button onClick={() => window.location.reload()} className="w-full py-2 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-bold hover:bg-amber-500 hover:text-white transition-all text-left px-4 flex justify-between">
+                <span>重新读取正式博客配置</span><span>📥</span>
               </button>
             </div>
           </div>
@@ -226,7 +222,7 @@ function SettingsContent() {
               {activeTab === 'display' && <DisplaySection key="display" />}
               {activeTab === 'background' && <BackgroundSection key="background" formData={formData} handleUpdate={handleUpdate} pushToQueue={pushToQueue} />}
               {activeTab === 'music' && <MusicSection key="music" formData={formData} handleUpdate={handleUpdate} pushToQueue={pushToQueue} musicDetails={musicDetails} queryMusic={queryMusic} queryLoading={queryLoading} queryResult={queryResult} confirmAddMusic={confirmAddMusic} removeSong={removeSong} />}
-              {activeTab === 'gallery' && <GallerySection key="gallery" formData={formData} handleUpdate={handleUpdate} pushToQueue={pushToQueue} />}
+              {activeTab === 'gallery' && <GallerySection key="gallery" />}
               {activeTab === 'footer' && <FooterSection key="footer" formData={formData} handleUpdate={handleUpdate} pushToQueue={pushToQueue} />}
               {activeTab === 'danmaku' && <DanmakuSection key="danmaku" formData={formData} handleUpdate={handleUpdate} pushToQueue={pushToQueue} />}
               {activeTab === 'comment' && <CommentSection key="comment" formData={formData} handleUpdate={handleUpdate} pushToQueue={pushToQueue} />}

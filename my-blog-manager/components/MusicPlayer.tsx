@@ -3,16 +3,16 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, RefreshCcw, ListMusic, Mic2, Disc3, Volume2, VolumeX, Search, X, MessageSquare } from 'lucide-react';
-import Navbar from '../../components/Navbar';
-import PageTransition from '../../components/PageTransition';
-import { useMusic } from '../../components/MusicProvider';
-import Comments from '../../components/Comments';
+import Navbar from './Navbar';
+import PageTransition from './PageTransition';
+import { useMusic } from './MusicProvider';
+import Comments from './Comments';
 
 export default function MusicPage() {
   const {
     playlist, currentSong, isPlaying, progress, currentTime, duration, currentLyric,
     isLoading, togglePlay, nextSong, prevSong, handleSeek,
-    playSong, selectSong,
+    playSong,
     playMode, togglePlayMode,
     volume, setVolume, isMuted, toggleMute
   } = useMusic();
@@ -30,7 +30,7 @@ export default function MusicPage() {
     const rawLrc = currentSong.lrc || currentSong.lyric || (typeof currentSong.lyrics === 'string' ? currentSong.lyrics : '');
     if (typeof rawLrc === 'string' && rawLrc.trim().length > 0) {
       const lines = rawLrc.split('\n');
-      const parsed = [];
+      const parsed: Array<{ time: number; text: string }> = [];
       const timeExp = /\[(\d{2,}):(\d{2})(?:[.:](\d{2,3}))?\]/g;
       let hasValidTime = false;
       for (const line of lines) {
@@ -85,8 +85,7 @@ export default function MusicPage() {
   };
 
   const handlePlaySong = (index: number) => {
-    if (typeof playSong === 'function') playSong(index);
-    else if (typeof selectSong === 'function') selectSong(index);
+    playSong(index);
   };
 
   const filteredPlaylist = useMemo(() => {

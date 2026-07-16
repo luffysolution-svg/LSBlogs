@@ -142,6 +142,7 @@ export default function EditorClient({ historyPostTags, historyChatterTags, hist
           mood={mood} setMood={setMood}
           allHistoryPostTags={historyPostTags}
           allHistoryChatterTags={historyChatterTags}
+          isLoadingTags={false}
           allHistoryMoods={historyMoods}
           onSave={handleSave}
           isSaving={isSaving}

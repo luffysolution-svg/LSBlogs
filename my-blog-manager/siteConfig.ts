@@ -1,4 +1,4 @@
-// siteConfig.ts - 本地管理器使用的博客配置源
+// siteConfig.ts - 博客配置源
 
 export const siteConfig = {
   title: "你的名字 | 次元笔记",
@@ -49,7 +49,7 @@ export const siteConfig = {
     label: "blog-comment",
   },
   buildDate: "2026-01-01T00:00:00",
-  footerBadges: [],
+  footerBadges: [] as { name: string; color: string; svg: string }[],
   icpConfig: {
     name: "",
     link: "",

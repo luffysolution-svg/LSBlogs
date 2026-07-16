@@ -143,7 +143,7 @@ def _status_paths(blog_path: Path, managed_only: bool = False) -> list[str]:
     command = ["status", "--short", "--untracked-files=all"]
     if managed_only:
         command.extend(["--", *get_managed_git_paths()])
-    output = _git(blog_path, *command)
+    output = _run(["git", *command], blog_path).stdout
     return [line[3:] for line in output.splitlines() if len(line) > 3]
 
 

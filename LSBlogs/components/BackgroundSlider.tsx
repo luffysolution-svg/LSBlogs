@@ -12,14 +12,14 @@ export default function BackgroundSlider() {
   const images = siteConfig.bgImages;
 
   useEffect(() => {
-    if (images.length <= 1 || reduceMotion) return;
+    if (images.length <= 1) return;
 
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % images.length);
     }, 9000);
 
     return () => window.clearInterval(timer);
-  }, [images.length, reduceMotion]);
+  }, [images.length]);
 
   if (images.length === 0) return null;
 

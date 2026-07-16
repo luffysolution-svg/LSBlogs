@@ -8,7 +8,7 @@ import { useState } from "react";
 import { siteConfig } from "../siteConfig";
 import { useTheme } from "./ThemeProvider";
 
-const primaryLinks = [
+const navigationLinks = [
   { name: "首页", href: "/" },
   { name: "文章", href: "/timeline" },
   { name: "项目", href: "/projects" },
@@ -16,9 +16,6 @@ const primaryLinks = [
   { name: "照片", href: "/photowall" },
   { name: "音乐", href: "/music" },
   { name: "关于", href: "/about" },
-];
-
-const secondaryLinks = [
   { name: "杂谈", href: "/chatter" },
   { name: "友链", href: "/friends" },
   { name: "灵境", href: "/tree" },
@@ -34,18 +31,18 @@ export default function Navbar() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
-      <div className="glass-panel mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+      <div className="glass-panel nav-panel mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/"
-          className="min-w-0 truncate text-base font-black tracking-[-0.035em] text-white sm:text-lg"
+          className="min-w-0 truncate text-base font-black tracking-[-0.035em] text-[var(--nav-foreground)] sm:text-lg"
         >
           {siteConfig.navTitle || siteConfig.authorName}
           <span className="mx-1.5 text-[var(--accent)]">{siteConfig.navSuffix || "/"}</span>
-          <span className="font-semibold text-white/70">{siteConfig.navAfter}</span>
+          <span className="font-semibold text-[var(--nav-muted)]">{siteConfig.navAfter}</span>
         </Link>
 
-        <nav className="hidden items-center gap-5 lg:flex" aria-label="主导航">
-          {primaryLinks.map((link) => (
+        <nav className="hidden items-center gap-4 xl:flex" aria-label="主导航">
+          {navigationLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -70,7 +67,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setIsOpen((value) => !value)}
-            className="icon-button lg:hidden"
+            className="icon-button xl:hidden"
             aria-expanded={isOpen}
             aria-controls="mobile-navigation"
             aria-label={isOpen ? "关闭导航" : "打开导航"}
@@ -83,10 +80,10 @@ export default function Navbar() {
       {isOpen && (
         <nav
           id="mobile-navigation"
-          className="glass-panel mx-auto mt-2 grid max-w-7xl grid-cols-2 gap-2 p-3 sm:grid-cols-3 lg:hidden"
+          className="glass-panel nav-panel mx-auto mt-2 grid max-w-7xl grid-cols-2 gap-2 p-3 sm:grid-cols-3 xl:hidden"
           aria-label="移动端导航"
         >
-          {[...primaryLinks, ...secondaryLinks].map((link) => (
+          {navigationLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -95,7 +92,7 @@ export default function Navbar() {
               className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
                 isActive(link.href)
                   ? "bg-[var(--accent)] text-white"
-                  : "text-white/75 hover:bg-white/10 hover:text-white"
+                  : "text-[var(--nav-muted)] hover:bg-[var(--control-hover)] hover:text-[var(--nav-foreground)]"
               }`}
             >
               {link.name}
@@ -104,7 +101,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold text-[var(--nav-muted)] transition-colors hover:bg-[var(--control-hover)] hover:text-[var(--nav-foreground)]"
           >
             {isDark ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
             {isDark ? "浅色模式" : "深色模式"}

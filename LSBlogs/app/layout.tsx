@@ -36,7 +36,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 className="absolute inset-0"
                 style={{ background: "var(--backdrop-overlay)" }}
               />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(201,68,64,0.18),transparent_32%),linear-gradient(180deg,transparent_0%,rgba(5,9,16,0.22)_100%)]" />
+              <div
+                className="absolute inset-0"
+                style={{ background: "var(--backdrop-effects)" }}
+              />
             </div>
 
             <div className="relative z-10 min-h-screen">{children}</div>

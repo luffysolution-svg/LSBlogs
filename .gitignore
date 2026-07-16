@@ -1,0 +1,24 @@
+# Dependencies and builds
+**/node_modules/
+**/.next/
+**/out/
+**/build/
+**/*.tsbuildinfo
+
+# Local settings and secrets
+**/.env*
+!**/.env.example
+**/.vercel/
+**/manager_data/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Personal source assets and editor state
+asset/
+picture/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

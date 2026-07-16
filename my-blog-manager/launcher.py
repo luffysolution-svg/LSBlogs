@@ -15,6 +15,7 @@ import uvicorn
 import time
 import socket
 import json
+import shutil
 import subprocess
 import traceback
 from cms_core.main import app
@@ -69,6 +70,24 @@ def write_port_config(port):
         os.makedirs(standalone_public, exist_ok=True)
         with open(os.path.join(standalone_public, 'backend_config.json'), 'w', encoding='utf-8') as f:
             json.dump({"api_port": port}, f)
+
+def prepare_standalone_assets():
+    source_static = os.path.join(BASE_DIR, '.next', 'static')
+    standalone_dir = os.path.join(BASE_DIR, '.next', 'standalone')
+
+    if not os.path.isdir(source_static):
+        return False
+
+    source_public = os.path.join(BASE_DIR, 'public')
+    if os.path.isdir(source_public):
+        shutil.copytree(source_public, os.path.join(standalone_dir, 'public'), dirs_exist_ok=True)
+
+    shutil.copytree(
+        source_static,
+        os.path.join(standalone_dir, '.next', 'static'),
+        dirs_exist_ok=True,
+    )
+    return True
 
 def wait_for_port(port, timeout=60):
     start_time = time.time()
@@ -127,7 +146,7 @@ if __name__ == "__main__":
     server_js = os.path.join(standalone_dir, 'server.js')
 
     # 🌟 核心自适应逻辑：判断是“打包运行”还是“开发运行”
-    if os.path.exists(server_js):
+    if os.path.exists(server_js) and prepare_standalone_assets():
         print("🚀 [生产模式] 使用 127.0.0.1 强制同步...")
         env_vars["HOSTNAME"] = "127.0.0.1"
         frontend_process = subprocess.Popen(["node", "server.js"], cwd=standalone_dir, env=env_vars, shell=True)

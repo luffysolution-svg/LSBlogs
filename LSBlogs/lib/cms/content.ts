@@ -157,7 +157,20 @@ export function parseSiteConfig(source: string): Record<string, unknown> {
 }
 
 export function serializeAlbums(value: unknown): string {
-  const albums = Array.isArray(value) ? value : [];
+  const albums = (Array.isArray(value) ? value : []).map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    const album = item as Record<string, unknown>;
+    const photos = Array.isArray(album.photos) ? album.photos : [];
+    const firstPhoto = photos[0];
+    const firstPhotoUrl = firstPhoto && typeof firstPhoto === "object"
+      ? String((firstPhoto as Record<string, unknown>).url || "")
+      : "";
+    return {
+      ...album,
+      cover: String(album.cover || firstPhotoUrl),
+      photos,
+    };
+  });
   return `// 本文件由 LSBlogs 在线管理端自动生成，请勿手动修改
 export interface Photo { url: string; caption?: string; }
 export interface Album { id: string; title: string; description: string; cover: string; date: string; photos: Photo[]; }

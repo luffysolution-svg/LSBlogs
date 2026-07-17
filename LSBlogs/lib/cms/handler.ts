@@ -378,12 +378,23 @@ async function handleAuthenticated(
     const message = String(payload.commitMessage || "").trim().slice(0, 120) ||
       `发布博客内容 ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
     const release = await createReleasePullRequest(changes, message);
+    if (release.skipped) {
+      await updateCmsState((next) => {
+        next.pendingChanges = {};
+      });
+      return json({
+        success: true,
+        status: "published",
+        message: "待发布变更已在远端生效，重复记录已清理",
+        changedFiles: [],
+      });
+    }
     const record = {
       createdAt: new Date().toISOString(),
       branch: release.branch,
       pullNumber: release.pullNumber,
       pullUrl: release.pullUrl,
-      files: changes.map((change) => change.path),
+      files: release.changedFiles,
     };
     await updateCmsState((next) => {
       next.pendingChanges = {};

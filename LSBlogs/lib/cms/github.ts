@@ -17,6 +17,14 @@ type GithubTreeItem = {
 type GithubRef = { object: { sha: string } };
 type GithubCommit = { sha: string; tree: { sha: string } };
 
+type GithubTreeEntry = {
+  path: string;
+  mode: "100644";
+  type: "blob";
+  content?: string;
+  sha?: null;
+};
+
 function encodePath(value: string): string {
   return value.split("/").map(encodeURIComponent).join("/");
 }
@@ -48,6 +56,23 @@ async function githubRequest<T>(
 
 function repoEndpoint(config: CmsGithubConfig): string {
   return `/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}`;
+}
+
+export function buildGithubTreeEntries(
+  changes: PendingChange[],
+  repositoryRoot: string,
+  existingPaths: ReadonlySet<string>,
+): GithubTreeEntry[] {
+  return changes.flatMap((change) => {
+    const path = toRepositoryPath(change.path, repositoryRoot);
+    if (change.content === null && !existingPaths.has(path)) return [];
+    return [{
+      path,
+      mode: "100644" as const,
+      type: "blob" as const,
+      ...(change.content === null ? { sha: null } : { content: change.content }),
+    }];
+  });
 }
 
 export async function getRepositoryInfo() {
@@ -136,12 +161,32 @@ export async function createReleasePullRequest(
   }
 
   const head = await getHead(config);
-  const tree = changes.map((change) => ({
-    path: toRepositoryPath(change.path, config.root),
-    mode: "100644",
-    type: "blob",
-    ...(change.content === null ? { sha: null } : { content: change.content }),
-  }));
+  let existingPaths = new Set<string>();
+  if (changes.some((change) => change.content === null)) {
+    const baseTree = await githubRequest<{ tree: GithubTreeItem[]; truncated: boolean }>(
+      `${repoEndpoint(config)}/git/trees/${head.treeSha}?recursive=1`,
+      {},
+      config,
+    );
+    if (baseTree.truncated) throw new Error("仓库文件树过大，无法安全确认待删除文件");
+    existingPaths = new Set(
+      baseTree.tree.filter((item) => item.type === "blob").map((item) => item.path),
+    );
+  }
+  const tree = buildGithubTreeEntries(changes, config.root, existingPaths);
+  const changedFiles = tree
+    .map((entry) => fromRepositoryPath(entry.path, config.root))
+    .filter((path): path is string => Boolean(path));
+  if (!tree.length) {
+    return {
+      skipped: true as const,
+      branch: "",
+      commitSha: head.commitSha,
+      pullNumber: 0,
+      pullUrl: "",
+      changedFiles,
+    };
+  }
   const createdTree = await githubRequest<{ sha: string }>(
     `${repoEndpoint(config)}/git/trees`,
     {
@@ -192,10 +237,12 @@ export async function createReleasePullRequest(
       config,
     );
     return {
+      skipped: false as const,
       branch,
       commitSha: commit.sha,
       pullNumber: pull.number,
       pullUrl: pull.html_url,
+      changedFiles,
     };
   } catch (error) {
     await githubRequest(

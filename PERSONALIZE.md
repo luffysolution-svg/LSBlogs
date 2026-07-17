@@ -10,7 +10,7 @@ npm ci
 npm run dev
 ```
 
-Windows 用户也可以双击根目录的 `Start-Blog.bat`。浏览器打开 <http://localhost:3000>。
+Windows 用户也可以双击根目录的 `Start-Blog.bat`。浏览器打开 <http://localhost:3000>。正式管理入口是部署域名的 `/login`。
 
 ## 2. 修改站点身份
 
@@ -50,15 +50,13 @@ Windows 用户也可以双击根目录的 `Start-Blog.bat`。浏览器打开 <ht
 3. 将 Vercel 环境变量 `NEXT_PUBLIC_GITHUB_COMMENTS_REPO` 设置为 `你的用户名/仓库名`。
 4. 确认评论没有写入模板作者的 Issues。
 
-## 6. 使用本地管理器
+## 6. 使用云端管理台
 
-双击 `my-blog-manager/Start.bat`。管理器会自动寻找同级的 `LSBlogs`，无需手写绝对路径。
+打开部署域名的 `/login`。管理台可作为 PWA 安装到电脑、平板和手机；所有设备共用加密草稿、待处理队列和发布状态。
 
-如果目录结构不同，可在设置页选择博客目录，或在启动前设置 `LSBLOGS_BLOG_PATH`。自定义路径只保存在被 Git 忽略的 `manager_data/deploy_config.json`。
+首次正式发布前，先使用“检查并发布”核对目标仓库、分支和文件清单。管理端会创建独立 PR，GitHub Actions 生产构建通过后才合并并触发 Vercel 部署。
 
-管理器直接读写 `LSBlogs`，它是正式内容的唯一数据源；未发布草稿、待处理队列和本机私密设置留在管理器目录。首次正式发布前，先使用“检查并发布”核对目录、远程仓库、分支和文件清单。管理器会先执行生产构建，再提交受管理博客内容的新增、修改和删除。
-
-图床可在设置页选择 Lsky Pro、腾讯云 COS、阿里云 OSS 或 GitHub。密钥只保存在被 Git 忽略的 `manager_data/picbed_config.json`；请使用最小权限凭据，并确保图片对象可公开读取。
+图床可选择默认的 Vercel Blob，或 Lsky Pro、腾讯云 COS、阿里云 OSS、GitHub。第三方密钥在服务端加密保存，不会进入 Git 或浏览器前端包。
 
 ## 7. 部署到 Vercel
 
@@ -66,8 +64,9 @@ Windows 用户也可以双击根目录的 `Start-Blog.bat`。浏览器打开 <ht
 - Framework Preset：Next.js
 - Root Directory：`LSBlogs`
 - Production Branch：`main`
+- Storage：Public Vercel Blob
 
-可选环境变量见 `LSBlogs/.env.example`。
+必需环境变量和 GitHub 权限见 [CMS_DEPLOYMENT.md](CMS_DEPLOYMENT.md)，变量清单也可参考 `LSBlogs/.env.example`。
 
 ## 8. 发布前验证
 

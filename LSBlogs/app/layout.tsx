@@ -2,9 +2,7 @@ import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "../components/ThemeProvider";
-import { MusicProvider } from "../components/MusicProvider";
-import BackgroundSlider from "../components/BackgroundSlider";
+import AppShell from "../components/AppShell";
 import { siteConfig } from "../siteConfig";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -28,23 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       suppressHydrationWarning
     >
       <body className="min-h-full overflow-x-hidden">
-        <ThemeProvider>
-          <MusicProvider>
-            <div className="fixed inset-0 -z-20 overflow-hidden pointer-events-none">
-              {!siteConfig.useGradient && <BackgroundSlider />}
-              <div
-                className="absolute inset-0"
-                style={{ background: "var(--backdrop-overlay)" }}
-              />
-              <div
-                className="absolute inset-0"
-                style={{ background: "var(--backdrop-effects)" }}
-              />
-            </div>
-
-            <div className="relative z-10 min-h-screen">{children}</div>
-          </MusicProvider>
-        </ThemeProvider>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

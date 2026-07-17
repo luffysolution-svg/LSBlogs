@@ -1,0 +1,56 @@
+name: CMS publish
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cms-publish-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-merge:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'cms/publish-')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: LSBlogs
+    steps:
+      - name: Check out CMS release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: LSBlogs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production site
+        run: npm run build
+        env:
+          CMS_ADMIN_PASSWORD: build-placeholder-only
+          CMS_SESSION_SECRET: build-placeholder-0123456789abcdef
+          CMS_GITHUB_REPO: ${{ github.repository }}
+          CMS_GITHUB_BRANCH: main
+          CMS_GITHUB_ROOT: LSBlogs
+          CMS_GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Merge verified CMS release
+        run: gh pr merge "$PR_URL" --squash --delete-branch
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}

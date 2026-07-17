@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseTypescriptArray, serializeAlbums } from "../lib/cms/content";
+import {
+  parseSiteConfig,
+  parseTypescriptArray,
+  serializeAlbums,
+  serializeSiteConfig,
+} from "../lib/cms/content";
+
+test("reads a generated site config after its type declaration", () => {
+  const source = serializeSiteConfig({
+    title: "Test blog",
+    cloudMusicIds: ["1809646618", "3361076230"],
+  });
+
+  assert.deepEqual(parseSiteConfig(source).cloudMusicIds, ["1809646618", "3361076230"]);
+});
 
 test("uses the first photo as the album cover when cover is missing", () => {
   const source = serializeAlbums([

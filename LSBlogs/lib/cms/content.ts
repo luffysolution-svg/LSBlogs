@@ -45,7 +45,10 @@ export function documentPath(type: ContentType, id: unknown): string {
 }
 
 function frontmatter(data: Record<string, unknown>, body: string): string {
-  return `---\n${stringifyYaml(data).trimEnd()}\n---\n\n${body.trim()}\n`;
+  return `---\n${stringifyYaml(data, {
+    defaultKeyType: "PLAIN",
+    defaultStringType: "QUOTE_DOUBLE",
+  }).trimEnd()}\n---\n\n${body.trim()}\n`;
 }
 
 export function draftToMarkdown(draft: CmsDraft): { id: string; path: string; content: string } {

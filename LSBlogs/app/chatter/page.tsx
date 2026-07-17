@@ -42,7 +42,7 @@ export default function ChatterPage() {
       return {
         slug,
         title: data.title || '',
-        date: data.date || '未知时间',
+        date: String(data.date || '未知时间'),
         tags: data.tags || [],
         mood: data.mood || '',
         cover: data.cover || '',

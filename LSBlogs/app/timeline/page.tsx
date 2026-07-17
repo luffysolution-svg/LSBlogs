@@ -37,7 +37,7 @@ export default function Timeline() {
         posts.push({
           slug,
           title: data.title || '无标题',
-          date: data.date || '1970-01-01',
+          date: String(data.date || '1970-01-01'),
           description: data.description || '',
           tags: postTags,
           cover: data.cover || siteConfig.defaultPostCover,

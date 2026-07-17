@@ -24,6 +24,7 @@ import ClientTOC from '../../../components/ClientTOC';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
 import SidebarLyric from '../../../components/SidebarLyric';
+import CopyableRichText from '../../../components/CopyableRichText';
 
 export async function generateStaticParams() {
   const postsDirectory = path.join(process.cwd(), 'posts');
@@ -255,10 +256,10 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
                   }
                 `}</style>
 
-                <div
+                <CopyableRichText
                   id="article-content"
                   className="prose prose-slate dark:prose-invert prose-base md:prose-lg max-w-none text-slate-800 dark:text-slate-200 transition-colors duration-700 scroll-smooth"
-                  dangerouslySetInnerHTML={{ __html: postData.contentHtml }}
+                  html={postData.contentHtml}
                 />
               </div>
 

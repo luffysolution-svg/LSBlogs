@@ -4,6 +4,7 @@ import {
   draftToMarkdown,
   parseSiteConfig,
   parseTypescriptArray,
+  richTextToMarkdown,
   serializeAlbums,
   serializeSiteConfig,
 } from "../lib/cms/content";
@@ -18,6 +19,21 @@ test("writes multiple normalized article bookmarks to frontmatter", () => {
   });
 
   assert.match(document.content, /tags:\n\s+- "React"\n\s+- "Next\.js"/);
+});
+
+test("preserves rich editor formats when converting content to markdown", () => {
+  const markdown = richTextToMarkdown(`
+    <p style="text-align: center"><strong>Centered</strong> H<sub>2</sub>O</p>
+    <p><span style="color: #6366F1; font-size: 24px"><u>Styled</u></span> x<sup>2</sup> <mark style="background-color: #FEF08A">Focus</mark></p>
+    <img src="https://example.com/image.png" alt="demo" style="width: 50%; height: auto">
+    <pre><code class="language-ts">const answer = 42;</code></pre>
+  `);
+
+  assert.match(markdown, /<p style="text-align: center;"><strong>Centered<\/strong> H<sub>2<\/sub>O<\/p>/);
+  assert.match(markdown, /<span style="color: #6366F1; font-size: 24px;"><u>Styled<\/u><\/span>/);
+  assert.match(markdown, /x<sup>2<\/sup> <mark style="background-color: #FEF08A;">Focus<\/mark>/);
+  assert.match(markdown, /<img src="https:\/\/example\.com\/image\.png" alt="demo" style="width: 50%; height: auto;">/);
+  assert.match(markdown, /```ts\nconst answer = 42;\n```/);
 });
 
 test("reads a generated site config after its type declaration", () => {

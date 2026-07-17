@@ -15,19 +15,16 @@ import { Color } from '@tiptap/extension-color';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 
-// 🌟 引入 Markdown 插件
-import { Markdown } from 'tiptap-markdown';
-
 // 🌟 引入满血版 C++ 语法高亮
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { createLowlight, all } from 'lowlight';
 
 import {
-  Undo2, Redo2, Eraser, Bold, Italic, Underline as UnderlineIcon, Strikethrough,
+  Undo2, Redo2, Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, List, ListOrdered, ListTodo,
   Highlighter, Code2, Heading1, Heading2, Heading3,
   Type, ImageIcon, Quote, RemoveFormatting, ChevronDown,
-  Pipette, Hash, Check, Link2, Superscript as SupIcon, Subscript as SubIcon, Minus, Palette, Lock
+  Pipette, Hash, Check, Link2, Superscript as SupIcon, Subscript as SubIcon, Palette, Lock
 } from 'lucide-react';
 
 const lowlight = createLowlight(all);
@@ -38,6 +35,7 @@ const CustomImage = Image.extend({
       ...this.parent?.(),
       width: {
         default: '100%',
+        parseHTML: element => element.style.width || element.getAttribute('width') || '100%',
         renderHTML: attributes => ({
           style: `width: ${attributes.width}; height: auto; display: block; margin: 2rem auto; border-radius: 2rem; box-shadow: 0 20px 50px rgba(0,0,0,0.15);`
         })
@@ -50,7 +48,12 @@ const FontSize = Extension.create({
   name: 'fontSize',
   addOptions() { return { types: ['textStyle'] }; },
   addGlobalAttributes() { return [{ types: this.options.types, attributes: { fontSize: { default: null, parseHTML: element => element.style.fontSize?.replace(/['"]+/g, ''), renderHTML: attributes => attributes.fontSize ? { style: `font-size: ${attributes.fontSize}` } : {} } } }]; },
-  addCommands() { return { setFontSize: (fontSize: string) => ({ chain }) => chain().setMark('textStyle', { fontSize }).run() }; },
+  addCommands() {
+    return {
+      setFontSize: (fontSize: string) => ({ chain }) => chain().setMark('textStyle', { fontSize }).run(),
+      unsetFontSize: () => ({ chain }) => chain().setMark('textStyle', { fontSize: null }).run(),
+    };
+  },
 });
 
 // 🌟 终极修复：彻底废弃 absolute 下拉框，升级为 Fixed 居中模态框 (Modal)！
@@ -68,13 +71,14 @@ const CustomColorPicker = ({ activeColor, onSelect, onConfirm, recentColors, onC
         <div className="flex flex-col gap-5">
           <div className="flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Color Palette</span>
-            <button onClick={() => onConfirm(hex)} className="w-8 h-8 flex items-center justify-center bg-indigo-500 text-white rounded-full hover:scale-110 transition-transform">
+            <button type="button" onClick={() => onConfirm(hex)} className="w-8 h-8 flex items-center justify-center bg-indigo-500 text-white rounded-full hover:scale-110 transition-transform">
               <Check size={16}/>
             </button>
           </div>
           <div className="grid grid-cols-4 gap-2.5">
             {presets.map(c => (
               <button
+                type="button"
                 key={c}
                 onClick={() => { setHex(c); onSelect(c); }}
                 className="w-full aspect-square rounded-xl border border-white/20 hover:scale-110 hover:shadow-md transition-all"
@@ -95,6 +99,7 @@ const CustomColorPicker = ({ activeColor, onSelect, onConfirm, recentColors, onC
             <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-200/50 dark:border-white/10">
               {recentColors.map((c: string) => (
                 <button
+                  type="button"
                   key={c}
                   onClick={() => { setHex(c); onSelect(c); }}
                   className="w-6 h-6 rounded-full border border-white/40 shadow-sm hover:scale-125 transition-transform"
@@ -194,7 +199,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, EditorProps>(({ title, s
 
   if (!editor) return null;
 
-  const currentFontSize = editor.getAttributes('textStyle').fontSize || "default";
+  const currentFontSize = editor.getAttributes('textStyle').fontSize || '';
 
   const toggleLink = () => {
     if (editor.isActive('link')) {
@@ -212,12 +217,26 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, EditorProps>(({ title, s
     editor.chain().focus().extendMarkRange('link').setLink({ href: safeUrl }).run();
   };
 
-  const Btn = ({ onClick, active, children, title }: any) => (
+  const clearFormatting = () => {
+    editor.chain().focus().unsetAllMarks().unsetTextAlign().clearNodes().run();
+  };
+
+  const Btn = ({ onClick, active, children, title, disabled = false }: {
+    onClick: () => void;
+    active?: boolean;
+    children: React.ReactNode;
+    title?: string;
+    disabled?: boolean;
+  }) => (
     <button
+      type="button"
       onClick={onClick}
+      onMouseDown={(event) => event.preventDefault()}
       title={title}
+      disabled={disabled}
+      aria-pressed={active}
       className={`p-2.5 rounded-xl transition-all duration-300 ease-out flex items-center justify-center 
-        ${active ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/40 scale-110' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'}`}
+        ${active ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/40 scale-110' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50'} disabled:cursor-not-allowed disabled:opacity-30`}
     >
       {children}
     </button>
@@ -296,7 +315,11 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, EditorProps>(({ title, s
       </div>
 
       <div className="shrink-0 px-8 py-2.5 border-y border-white/20 dark:border-white/10 flex flex-wrap items-center gap-1.5 bg-white/10 dark:bg-black/20 backdrop-blur-md z-50">
-        <div className="flex items-center gap-1"><Btn onClick={() => editor.chain().focus().undo().run()}><Undo2 size={16}/></Btn><Btn onClick={() => editor.chain().focus().redo().run()}><Redo2 size={16}/></Btn><Btn onClick={() => editor.chain().focus().unsetAllMarks().run()}><RemoveFormatting size={16}/></Btn></div>
+        <div className="flex items-center gap-1">
+          <Btn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().chain().focus().undo().run()} title="撤销"><Undo2 size={16}/></Btn>
+          <Btn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().chain().focus().redo().run()} title="重做"><Redo2 size={16}/></Btn>
+          <Btn onClick={clearFormatting} title="清除所选内容的格式"><RemoveFormatting size={16}/></Btn>
+        </div>
         <div className="w-px h-6 bg-slate-400/20 mx-1" />
 
         <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-xl px-2">
@@ -304,11 +327,12 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, EditorProps>(({ title, s
           <select
             value={currentFontSize}
             onChange={(e) => {
-              editor.chain().focus().setFontSize(e.target.value).run();
+              if (e.target.value) editor.chain().focus().setFontSize(e.target.value).run();
+              else editor.chain().focus().unsetFontSize().run();
             }}
             className="bg-transparent text-[10px] font-black p-2 outline-none text-slate-700 dark:text-slate-300"
           >
-            <option value="default" disabled>字号</option>
+            <option value="">默认字号</option>
             {['14px', '16px', '18px', '20px', '24px', '32px', '48px'].map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -328,35 +352,35 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, EditorProps>(({ title, s
 
         <div className="w-px h-6 bg-slate-400/20 mx-1" />
         <div className="flex items-center gap-1">
-          <Btn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')}><Bold size={16}/></Btn>
-          <Btn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')}><Italic size={16}/></Btn>
-          <Btn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')}><UnderlineIcon size={16}/></Btn>
-          <Btn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')}><Strikethrough size={16}/></Btn>
-          <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')}><Code2 size={16}/></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="粗体"><Bold size={16}/></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="斜体"><Italic size={16}/></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="下划线"><UnderlineIcon size={16}/></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="删除线"><Strikethrough size={16}/></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive('codeBlock')} title="代码块"><Code2 size={16}/></Btn>
         </div>
         <div className="w-px h-6 bg-slate-400/20 mx-1" />
-        <div className="flex items-center gap-1"><Btn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })}><AlignLeft size={16}/></Btn><Btn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })}><AlignCenter size={16}/></Btn><Btn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })}><AlignRight size={16}/></Btn></div>
+        <div className="flex items-center gap-1"><Btn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="左对齐"><AlignLeft size={16}/></Btn><Btn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="居中对齐"><AlignCenter size={16}/></Btn><Btn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="右对齐"><AlignRight size={16}/></Btn></div>
         <div className="w-px h-6 bg-slate-400/20 mx-1" />
-        <div className="flex items-center gap-1"><Btn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')}><List size={16}/></Btn><Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')}><ListOrdered size={16}/></Btn><Btn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')}><ListTodo size={16}/></Btn><Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')}><Quote size={16}/></Btn></div>
+        <div className="flex items-center gap-1"><Btn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="无序列表"><List size={16}/></Btn><Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="有序列表"><ListOrdered size={16}/></Btn><Btn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive('taskList')} title="任务列表"><ListTodo size={16}/></Btn><Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="引用"><Quote size={16}/></Btn></div>
         <div className="w-px h-6 bg-slate-400/20 mx-1" />
 
         <div className="flex items-center gap-1">
-          <Btn onClick={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive('superscript')}><SupIcon size={16}/></Btn>
-          <Btn onClick={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive('subscript')}><SubIcon size={16}/></Btn>
-          <Btn onClick={toggleLink} active={editor.isActive('link')}><Link2 size={16}/></Btn>
-          <Btn onClick={onOpenImageTool}><ImageIcon size={16} className="text-indigo-500"/></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive('superscript')} title="上标"><SupIcon size={16}/></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive('subscript')} title="下标"><SubIcon size={16}/></Btn>
+          <Btn onClick={toggleLink} active={editor.isActive('link')} title="链接"><Link2 size={16}/></Btn>
+          <Btn onClick={onOpenImageTool} title="插入图片"><ImageIcon size={16} className="text-indigo-500"/></Btn>
         </div>
 
-        {editor.isActive('image') && <div className="flex items-center gap-1 ml-4 bg-indigo-500/10 p-1 px-3 rounded-2xl border border-indigo-500/20 border-dashed animate-in slide-in-from-left">{['25%', '50%', '75%', '100%'].map(s => <button key={s} onClick={() => editor.chain().focus().updateAttributes('image', { width: s }).run()} className="px-2 py-1 text-[9px] font-bold hover:bg-white rounded-lg transition-all">{s}</button>)}</div>}
+        {editor.isActive('image') && <div className="flex items-center gap-1 ml-4 bg-indigo-500/10 p-1 px-3 rounded-2xl border border-indigo-500/20 border-dashed animate-in slide-in-from-left">{['25%', '50%', '75%', '100%'].map(s => <button type="button" key={s} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().updateAttributes('image', { width: s }).run()} className="px-2 py-1 text-[9px] font-bold hover:bg-white rounded-lg transition-all">{s}</button>)}</div>}
         <div className="flex-1" />
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1.5 px-3 rounded-2xl border border-white/10 shadow-inner">
               <Palette size={14} className="text-slate-400 mr-2" />
               <div className="flex items-center gap-1 pr-2 border-r border-white/10">
-                {textColors.map(c => <button key={c} onClick={() => editor.chain().focus().setColor(c).run()} onContextMenu={(e) => { e.preventDefault(); setTextColors(prev => prev.filter(col => col !== c)); }} className="w-4 h-4 rounded-full border border-white/40 hover:scale-125 transition-all shadow-sm" style={{ backgroundColor: c }} />)}
+                {textColors.map(c => <button type="button" key={c} title={`文字颜色 ${c}`} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().setColor(c).run()} onContextMenu={(e) => { e.preventDefault(); setTextColors(prev => prev.filter(col => col !== c)); }} className="w-4 h-4 rounded-full border border-white/40 hover:scale-125 transition-all shadow-sm" style={{ backgroundColor: c }} />)}
               </div>
-              <button onClick={() => { setShowTextPicker(true); setShowHighlightPicker(false); }} className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center border border-indigo-500/30 ml-1">
+              <button type="button" title="选择文字颜色" onMouseDown={(event) => event.preventDefault()} onClick={() => { setShowTextPicker(true); setShowHighlightPicker(false); }} className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center border border-indigo-500/30 ml-1">
                 <Pipette size={14} className="text-indigo-500" />
               </button>
             </div>
@@ -366,9 +390,9 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, EditorProps>(({ title, s
             <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1.5 px-3 rounded-2xl border border-white/10 shadow-inner">
               <Highlighter size={14} className="text-slate-400 mr-2" />
               <div className="flex items-center gap-1 pr-2 border-r border-white/10">
-                {highlightColors.map(c => <button key={c} onClick={() => editor.chain().focus().setHighlight({ color: c }).run()} onContextMenu={(e) => { e.preventDefault(); setHighlightColors(prev => prev.filter(col => col !== c)); }} className="w-4 h-4 rounded-md border border-white/40 hover:scale-125 transition-all shadow-sm" style={{ backgroundColor: c }} />)}
+                {highlightColors.map(c => <button type="button" key={c} title={`高亮颜色 ${c}`} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().setHighlight({ color: c }).run()} onContextMenu={(e) => { e.preventDefault(); setHighlightColors(prev => prev.filter(col => col !== c)); }} className="w-4 h-4 rounded-md border border-white/40 hover:scale-125 transition-all shadow-sm" style={{ backgroundColor: c }} />)}
               </div>
-              <button onClick={() => { setShowHighlightPicker(true); setShowTextPicker(false); }} className="w-8 h-8 rounded-xl bg-yellow-400 shadow-xl flex items-center justify-center border border-white/20 ml-1">
+              <button type="button" title="选择高亮颜色" onMouseDown={(event) => event.preventDefault()} onClick={() => { setShowHighlightPicker(true); setShowTextPicker(false); }} className="w-8 h-8 rounded-xl bg-yellow-400 shadow-xl flex items-center justify-center border border-white/20 ml-1">
                 <Highlighter size={14} className="text-white" />
               </button>
             </div>

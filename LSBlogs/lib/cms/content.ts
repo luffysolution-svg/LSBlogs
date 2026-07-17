@@ -9,6 +9,89 @@ import type { CmsDraft, CmsOperation, ContentType, PendingChange } from "./types
 const INVALID_FILE_CHARS = /[<>:"/\\|?*\u0000-\u001f]/;
 let turndown: TurndownService | undefined;
 
+function styleValue(node: HTMLElement, property: string): string {
+  const declaration = (node.getAttribute("style") || "")
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.slice(0, part.indexOf(":")).trim().toLowerCase() === property);
+  return declaration ? declaration.slice(declaration.indexOf(":") + 1).trim() : "";
+}
+
+function safeColor(value: string): string {
+  return /^(?:#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\))$/i.test(value) ? value : "";
+}
+
+function safeLength(value: string): string {
+  return /^\d+(?:\.\d+)?(?:px|rem|em|%)$/i.test(value) ? value : "";
+}
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function addRichTextRules(service: TurndownService): void {
+  service.addRule("richTextCodeBlock", {
+    filter: (node) => node.nodeName === "PRE" && node.querySelector("code") !== null,
+    replacement: (_content, node) => {
+      const code = node.querySelector("code");
+      const value = (code?.textContent || "").replace(/\n$/, "");
+      const language = String(code?.className || "").match(/(?:^|\s)language-([\w+-]+)/)?.[1] || "";
+      const longestRun = Math.max(0, ...(value.match(/`+/g) || []).map((run) => run.length));
+      const fence = "`".repeat(Math.max(3, longestRun + 1));
+      return `\n\n${fence}${language}\n${value}\n${fence}\n\n`;
+    },
+  });
+  service.addRule("alignedBlock", {
+    filter: (node) => /^(?:P|H[1-3])$/.test(node.nodeName)
+      && /^(?:left|center|right|justify)$/.test(styleValue(node, "text-align")),
+    replacement: (_content, node) => {
+      const tag = node.nodeName.toLowerCase();
+      const alignment = styleValue(node, "text-align");
+      return `\n\n<${tag} style="text-align: ${alignment};">${node.innerHTML}</${tag}>\n\n`;
+    },
+  });
+  service.addRule("styledSpan", {
+    filter: (node) => node.nodeName === "SPAN"
+      && Boolean(safeColor(styleValue(node, "color")) || safeLength(styleValue(node, "font-size"))),
+    replacement: (content, node) => {
+      const styles = [
+        safeColor(styleValue(node, "color")) && `color: ${safeColor(styleValue(node, "color"))}`,
+        safeLength(styleValue(node, "font-size")) && `font-size: ${safeLength(styleValue(node, "font-size"))}`,
+      ].filter(Boolean);
+      return `<span style="${styles.join("; ")};">${content}</span>`;
+    },
+  });
+  service.addRule("highlight", {
+    filter: (node) => node.nodeName === "MARK",
+    replacement: (content, node) => {
+      const color = safeColor(styleValue(node, "background-color"));
+      return color ? `<mark style="background-color: ${color};">${content}</mark>` : `<mark>${content}</mark>`;
+    },
+  });
+  service.addRule("semanticInlineFormat", {
+    filter: ["u", "sub", "sup"],
+    replacement: (content, node) => {
+      const tag = node.nodeName.toLowerCase();
+      return `<${tag}>${content}</${tag}>`;
+    },
+  });
+  service.addRule("sizedImage", {
+    filter: (node) => node.nodeName === "IMG"
+      && Boolean(safeLength(styleValue(node, "width")))
+      && safeLength(styleValue(node, "width")) !== "100%",
+    replacement: (_content, node) => {
+      const source = escapeAttribute(node.getAttribute("src") || "");
+      const alt = escapeAttribute(node.getAttribute("alt") || "");
+      const width = safeLength(styleValue(node, "width"));
+      return `\n\n<img src="${source}" alt="${alt}" style="width: ${width}; height: auto;">\n\n`;
+    },
+  });
+}
+
 function getTurndown(): TurndownService {
   if (!turndown) {
     turndown = new TurndownService({
@@ -17,12 +100,17 @@ function getTurndown(): TurndownService {
       bulletListMarker: "-",
     });
     turndown.use(gfm);
+    addRichTextRules(turndown);
     turndown.addRule("emptyParagraph", {
       filter: (node) => node.nodeName === "P" && !(node.textContent || "").trim(),
       replacement: () => "\n\n",
     });
   }
   return turndown;
+}
+
+export function richTextToMarkdown(raw: string): string {
+  return getTurndown().turndown(raw).replace(/\n{3,}/g, "\n\n");
 }
 
 export function normalizeDocumentId(raw: unknown, prefix = "post"): string {
@@ -57,7 +145,7 @@ export function draftToMarkdown(draft: CmsDraft): { id: string; path: string; co
   const raw = String(draft.content || "")
     .replace(/<p>&#12288;<\/p>/gi, "<br><br>")
     .replace(/<p>\s*<\/p>/gi, "<br><br>");
-  const body = getTurndown().turndown(raw).replace(/\n{3,}/g, "\n\n");
+  const body = richTextToMarkdown(raw);
   const date = String(draft.date || "").trim();
   const finalDate = date
     ? date.length <= 10

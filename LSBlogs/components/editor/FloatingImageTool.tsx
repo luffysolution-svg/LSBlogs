@@ -10,6 +10,7 @@ interface FloatingImageToolProps {
   onInsert: (url: string) => void;
   mode?: 'content' | 'cover';
 }
+
 type CropSource = {
   file: File;
   url: string;
@@ -113,6 +114,32 @@ export default function FloatingImageTool({ isOpen, onClose, onInsert, mode = 'c
     handleFileUpload(file);
   };
 
+  const loadExternalCover = async (url: string) => {
+    setIsUploading(true);
+    try {
+      const response = await fetch('/api/cms/picbed/source', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || `HTTP ${response.status}`);
+      }
+      const blob = await response.blob();
+      const extension = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'webp';
+      const file = new File([blob], `external-cover.${extension}`, { type: blob.type });
+      clearCropSource();
+      setCropSource({ file, url: URL.createObjectURL(file), x: 50, y: 50, zoom: 1 });
+      setUploadedUrl('');
+      showToast('外链图片已载入，请确认 16:9 取景', 'success');
+    } catch (error) {
+      showToast(`外链封面载入失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const uploadCroppedCover = () => {
     const canvas = cropCanvasRef.current;
     if (!canvas || !cropSource) return;
@@ -143,7 +170,11 @@ export default function FloatingImageTool({ isOpen, onClose, onInsert, mode = 'c
     if (!externalUrl.match(/\.(jpeg|jpg|gif|png|webp|svg|avif)$|^data:image/i)) {
         showToast("这似乎不是一个标准的图片链接，但仍尝试预览", "warning");
     }
-    setUploadedUrl(externalUrl);
+    if (mode === 'cover') {
+      void loadExternalCover(externalUrl.trim());
+      return;
+    }
+    setUploadedUrl(externalUrl.trim());
     showToast("预览已生成", "success");
   };
 
@@ -246,18 +277,19 @@ export default function FloatingImageTool({ isOpen, onClose, onInsert, mode = 'c
                   </div>
                   <button
                     onClick={handleConfirmExternalUrl}
+                    disabled={isUploading}
                     className="w-full py-3 bg-slate-800 dark:bg-white dark:text-slate-900 text-white rounded-xl text-xs font-black shadow-lg hover:opacity-90 transition-all active:scale-95"
                   >
-                    确认图片链接
+                    {isUploading ? '正在载入...' : mode === 'cover' ? '载入并裁剪' : '确认图片链接'}
                   </button>
-                  {mode === 'cover' && <p className="text-[10px] leading-5 text-slate-500">外链受跨域限制会直接使用；需要裁剪时请先下载图片，再从“云端上传”选择。</p>}
+                  {mode === 'cover' && <p className="text-[10px] leading-5 text-slate-500">外链图片会先安全载入裁剪器，确认 16:9 取景后再上传。</p>}
                 </div>
               )
             ) : (
               // 预览与确认插入区
               <div className="flex flex-col gap-4">
-                <div className="w-full h-36 rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 border border-white/40 dark:border-slate-700/50 flex items-center justify-center p-2 shadow-inner group relative">
-                  <img src={uploadedUrl} alt="preview" className="max-w-full max-h-full object-contain rounded-xl drop-shadow-md" />
+                <div className={`${mode === 'cover' ? 'aspect-video' : 'h-36 p-2'} w-full rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 border border-white/40 dark:border-slate-700/50 flex items-center justify-center shadow-inner group relative`}>
+                  <img src={uploadedUrl} alt="preview" className={mode === 'cover' ? 'h-full w-full object-cover' : 'max-w-full max-h-full object-contain rounded-xl drop-shadow-md'} />
                   {/* 🌟 重新选择按钮 */}
                   <button
                     onClick={() => { setUploadedUrl(''); setExternalUrl(''); }}

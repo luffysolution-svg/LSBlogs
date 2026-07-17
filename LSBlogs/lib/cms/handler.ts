@@ -34,6 +34,7 @@ import {
   testPicbed,
   uploadImage,
 } from "./picbed";
+import { loadRemoteImage } from "./remote-image";
 import { loadCmsState, updateCmsState } from "./state";
 import type {
   CmsDraft,
@@ -340,6 +341,22 @@ async function handleAuthenticated(
     const state = await loadCmsState();
     const config = mergePicbedConfig(state.picbed, payload);
     return json({ success: true, message: await testPicbed(config) });
+  }
+  if (route === "picbed/source" && method === "POST") {
+    const payload = await bodyJson(request);
+    try {
+      const image = await loadRemoteImage(String(payload.url || ""));
+      return new Response(Uint8Array.from(image.content), {
+        headers: {
+          "Cache-Control": "no-store",
+          "Content-Length": String(image.content.length),
+          "Content-Type": image.contentType,
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    } catch (error) {
+      return json({ success: false, message: error instanceof Error ? error.message : "读取远程图片失败" }, 400);
+    }
   }
   if (route === "picbed/upload" && method === "POST") {
     const form = await request.formData();

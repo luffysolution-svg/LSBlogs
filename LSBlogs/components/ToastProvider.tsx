@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // 定义全局可以调用的方法
@@ -13,14 +13,22 @@ const ToastContext = createContext<ToastContextType | null>(null);
 // 1. 导出 Provider 组件（注意这里是 export function，没有 default）
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toastMsg, setToastMsg] = useState<{ text: string, type: 'success' | 'warning' | 'error' | 'info' } | null>(null);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showToast = (text: string, type: 'success' | 'warning' | 'error' | 'info' = 'success') => {
+  const showToast = useCallback((text: string, type: 'success' | 'warning' | 'error' | 'info' = 'success') => {
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
     setToastMsg({ text, type });
-    setTimeout(() => setToastMsg(null), 3000);
-  };
+    clearTimerRef.current = setTimeout(() => setToastMsg(null), 3000);
+  }, []);
+
+  useEffect(() => () => {
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+  }, []);
+
+  const contextValue = useMemo(() => ({ showToast }), [showToast]);
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={contextValue}>
       <AnimatePresence>
         {toastMsg && (
           <motion.div

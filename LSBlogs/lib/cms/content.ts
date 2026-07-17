@@ -93,9 +93,9 @@ export function momentToMarkdown(payload: Record<string, unknown>) {
 }
 
 function extractAssignedLiteral(source: string, exportName: string, open: string, close: string): string {
-  const assignment = source.search(new RegExp(`\\b${exportName}\\b[^=]*=`));
-  if (assignment < 0) throw new Error(`没有找到 ${exportName} 数据导出`);
-  const start = source.indexOf(open, assignment);
+  const assignment = new RegExp(`\\b${exportName}\\b[^=]*=`).exec(source);
+  if (!assignment) throw new Error(`没有找到 ${exportName} 数据导出`);
+  const start = source.indexOf(open, assignment.index + assignment[0].length);
   if (start < 0) throw new Error(`${exportName} 数据格式无效`);
   let depth = 0;
   let quote = "";

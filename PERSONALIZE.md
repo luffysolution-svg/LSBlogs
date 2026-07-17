@@ -68,6 +68,15 @@ Windows 用户也可以双击根目录的 `Start-Blog.bat`。浏览器打开 <ht
 
 必需环境变量和 GitHub 权限见 [CMS_DEPLOYMENT.md](CMS_DEPLOYMENT.md)，变量清单也可参考 `LSBlogs/.env.example`。
 
+首次生成或以后轮换管理员密码：
+
+```bash
+cd LSBlogs
+npm run cms:password -- --vercel --deploy
+```
+
+脚本支持 Windows、macOS 和 Linux，并保留现有 `CMS_SESSION_SECRET`，不会因换登录密码而破坏云端加密数据。
+
 ## 8. 发布前验证
 
 ```powershell

@@ -6,7 +6,10 @@ export const CMS_SESSION_COOKIE = "lsblogs_cms_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 function sign(value: string): string {
-  return createHmac("sha256", getSessionSecret()).update(value).digest("base64url");
+  const passwordDigest = createHash("sha256").update(getAdminPassword()).digest("hex");
+  return createHmac("sha256", getSessionSecret())
+    .update(`${passwordDigest}.${value}`)
+    .digest("base64url");
 }
 
 export function createSessionToken(now = Date.now()): string {

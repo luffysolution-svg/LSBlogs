@@ -14,7 +14,30 @@
 | `CMS_GITHUB_TOKEN` | GitHub Token，需要 Contents 和 Pull requests 读写权限 |
 | `BLOB_READ_WRITE_TOKEN` | 由项目绑定的 Vercel Blob 自动生成 |
 
-敏感值只保存在 Vercel 环境变量中。CMS 草稿、操作队列和图床密钥在写入 Blob 前使用 AES-256-GCM 加密；加密密钥由 `CMS_SESSION_SECRET` 派生。
+敏感值只保存在被 Git 忽略的本地 `.env.local` 和 Vercel 环境变量中。CMS 草稿、操作队列和图床密钥在写入 Blob 前使用 AES-256-GCM 加密；加密密钥由 `CMS_SESSION_SECRET` 派生。
+
+## 跨平台密码配置
+
+```bash
+cd LSBlogs
+
+# 仅生成或轮换本地管理员密码
+npm run cms:password
+
+# 同步到已关联的 Vercel 项目
+npm run cms:password -- --vercel
+
+# 同步后立即重新部署生产环境
+npm run cms:password -- --vercel --deploy
+
+# 仅限全新的 Vercel 项目：首次同时写入会话密钥
+npm run cms:password -- --vercel --initialize --deploy
+
+# 查看本地保存的现有密码
+npm run cms:password -- --show
+```
+
+脚本支持 Windows、macOS 和 Linux。密码写入 `.env.local`，并通过标准输入发送给 Vercel CLI，不会出现在 Git 或命令参数中。日常轮换只更改 `CMS_ADMIN_PASSWORD`，不会改写 Vercel 中现有的 `CMS_SESSION_SECRET`，避免已加密的云端草稿和配置无法读取。`--initialize` 只能用于尚无 CMS 数据的全新项目。新密码部署生效后，旧登录会话会失效，电脑、平板和手机改用同一个新密码登录。
 
 ## 一键部署
 

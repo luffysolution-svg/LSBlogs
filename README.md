@@ -31,6 +31,14 @@ LSBlogs 是一套可复用的个人博客模板，包含 Next.js 正式前端、
 4. 打开部署域名的 `/login`，从任意设备进入同一套管理台。
 5. 在管理台确认发布后，构建通过的内容会自动合并并部署。
 
+需要生成或轮换管理员密码时，在 `LSBlogs` 目录运行：
+
+```bash
+npm run cms:password -- --vercel --deploy
+```
+
+该命令在 Windows、macOS 和 Linux 上一致；部署后所有电脑、平板和手机继续使用同一个新密码。
+
 ```powershell
 git clone https://github.com/你的用户名/你的仓库.git
 cd 你的仓库\LSBlogs
@@ -57,7 +65,7 @@ LSBlogs/siteConfig.ts
 
 管理台内置在博客的 `/admin`，支持文章、杂谈、说说、相册、友链、项目、站点设置、草稿、发布预览与多云图床。Vercel Blob 是零配置默认图床，也可继续使用 Lsky Pro、腾讯云 COS、阿里云 OSS 或 GitHub。
 
-草稿、待处理队列和私密图床配置会加密同步到云端；GitHub Token 和登录密码只存在于部署环境。发布时只创建受管理内容的独立 PR，GitHub Actions 构建通过后才自动合并，Vercel 随后部署生产站点。完整说明见 [CMS_DEPLOYMENT.md](CMS_DEPLOYMENT.md)。
+草稿、待处理队列和私密图床配置会加密同步到云端；GitHub Token 和登录密码只存在于被 Git 忽略的本地环境文件与部署环境。发布时只创建受管理内容的独立 PR，GitHub Actions 构建通过后才自动合并，Vercel 随后部署生产站点。完整说明见 [CMS_DEPLOYMENT.md](CMS_DEPLOYMENT.md)。
 
 ## 验证
 

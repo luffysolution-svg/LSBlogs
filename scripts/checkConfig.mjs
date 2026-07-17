@@ -31,11 +31,6 @@ const commonKeys = [
 
 const tasks = [
   {
-    name: '管理器',
-    filePath: path.resolve('./my-blog-manager/siteConfig.ts'),
-    keys: [...commonKeys, 'picBedName', 'picBedUrl', 'picBedToken'],
-  },
-  {
     name: '正式博客',
     filePath: path.resolve('./LSBlogs/siteConfig.ts'),
     keys: commonKeys,

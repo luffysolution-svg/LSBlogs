@@ -159,10 +159,20 @@ async function confirmOverwrite(options, hasExistingPassword) {
 }
 
 function runVercel(args, secretInput) {
-  const executable = process.platform === "win32" ? "npx.cmd" : "npx";
+  const npxCandidates = [
+    process.env.npm_execpath
+      ? resolve(dirname(process.env.npm_execpath), "npx-cli.js")
+      : "",
+    resolve(dirname(process.execPath), "node_modules", "npm", "bin", "npx-cli.js"),
+  ].filter(Boolean);
+  const npxCli = npxCandidates.find((candidate) => existsSync(candidate));
+  const executable = npxCli ? process.execPath : "npx";
+  const commandArguments = npxCli
+    ? [npxCli, "--yes", "vercel@latest", ...args]
+    : ["--yes", "vercel@latest", ...args];
   const result = spawnSync(
     executable,
-    ["--yes", "vercel@latest", ...args],
+    commandArguments,
     {
       cwd: projectRoot,
       encoding: "utf8",
@@ -216,6 +226,10 @@ async function main() {
   }
   if (options.vercel && !existsSync(resolve(projectRoot, ".vercel", "project.json"))) {
     throw new Error("项目尚未关联 Vercel，请先运行 npx vercel link");
+  }
+  if (options.vercel) {
+    console.log("正在检查 Vercel CLI...");
+    runVercel(["--version"]);
   }
 
   await confirmOverwrite(options, Boolean(existingPassword));

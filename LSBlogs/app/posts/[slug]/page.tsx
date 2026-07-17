@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
@@ -53,6 +54,7 @@ function extractToc(content: string) {
 
 async function getPostData(slug: string) {
   const fullPath = path.join(process.cwd(), 'posts', `${slug}.md`);
+  if (!fs.existsSync(fullPath)) notFound();
   const fileContents = fs.readFileSync(fullPath, 'utf8');
   let { data, content } = matter(fileContents);
 

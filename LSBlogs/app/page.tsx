@@ -159,7 +159,7 @@ export default function Home() {
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 60vw"
-              className="object-cover transition-transform duration-700 group-hover:scale-[1.035]"
+              className="object-contain"
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,15,0.04)_12%,rgba(4,8,15,0.88)_100%)]" />
             <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
@@ -208,7 +208,7 @@ export default function Home() {
                         alt=""
                         fill
                         sizes="80px"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="object-contain"
                       />
                     </div>
                     <div className="min-w-0 flex-1">

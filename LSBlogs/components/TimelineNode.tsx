@@ -30,7 +30,7 @@ export default function TimelineNode({ post, index }: { post: any, index: number
             <img
               src={post.cover}
               alt={post.title}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              className="w-full h-full object-contain"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>
           </div>

@@ -75,9 +75,9 @@ export default function MetaMatrix({
         {/* 1. 封面图区 */}
         <div className="flex flex-col">
           <FieldLabel icon={ImageIcon} text="Cover Image" color="border-indigo-500" />
-          <div onClick={onOpenImageTool} className="w-full aspect-video bg-black/10 dark:bg-black/40 rounded-[32px] border-2 border-dashed border-white/10 flex items-center justify-center overflow-hidden mb-4 group relative cursor-pointer shadow-inner transition-all">
+          <div onClick={onOpenImageTool} className="w-full min-h-36 max-h-[50vh] bg-black/10 dark:bg-black/40 rounded-[32px] border-2 border-dashed border-white/10 flex items-center justify-center overflow-hidden p-2 mb-4 group relative cursor-pointer shadow-inner transition-all">
             {cover ? (
-              <img src={cover} alt="文章封面预览" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <img src={cover} alt="文章封面预览" className="max-w-full max-h-[calc(50vh-1rem)] h-auto w-auto object-contain rounded-[26px]" />
             ) : (
               <div className="flex flex-col items-center gap-2 text-slate-400">
                 <CloudUpload size={28} className="opacity-30 group-hover:opacity-100 group-hover:text-indigo-400 transition-all" />

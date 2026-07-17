@@ -120,13 +120,13 @@ function EditorContent() {
     }
   };
 
-  const handleSave = async (isPublish: boolean, shouldExitAfterSave: boolean = false) => {
+  const handleSave = async (isPublish: boolean, shouldExitAfterSave: boolean = false, finalTags: string[] = tags) => {
     if (!title.trim() && docType !== 'about') {
       showToast("⚠️ 请填写标题", "warning"); return;
     }
     const payload = {
       id: docType === 'about' ? 'about' : (currentDocId === 'new' ? null : currentDocId),
-      type: docType, title, tags, cover, mood, description: summary,
+      type: docType, title, tags: finalTags, cover, mood, description: summary,
       content: editorRef.current?.getContent() || '',
       date: date || new Date().toISOString().split('T')[0],
       published: isPublish
@@ -234,12 +234,12 @@ function EditorContent() {
             <MetaMatrix
               type={docType as any} tags={tags} setTags={setTags} cover={cover} setCover={setCover} summary={summary} setSummary={setSummary} mood={mood} setMood={setMood}
               allHistoryPostTags={historyPostTags} allHistoryChatterTags={historyChatterTags} isLoadingTags={isLoadingTags}
-              allHistoryMoods={historyMoods} onSave={(isPublish) => handleSave(isPublish, false)} isSaving={isSaving} lastSaved={lastSaved} onOpenImageTool={() => { setImgToolTarget('cover'); setIsImgToolOpen(true); }}
+              allHistoryMoods={historyMoods} onSave={(isPublish, finalTags) => handleSave(isPublish, false, finalTags)} isSaving={isSaving} lastSaved={lastSaved} onOpenImageTool={() => { setImgToolTarget('cover'); setIsImgToolOpen(true); }}
             />
           </aside>
         </main>
       </PageTransition>
-      <FloatingImageTool isOpen={isImgToolOpen} onClose={() => setIsImgToolOpen(false)} onInsert={(url) => {
+      <FloatingImageTool mode={imgToolTarget === 'cover' ? 'cover' : 'content'} isOpen={isImgToolOpen} onClose={() => setIsImgToolOpen(false)} onInsert={(url) => {
         if (imgToolTarget === 'editor') { editorRef.current?.insertImage(url); if (!cover) setCover(url); }
         else { setCover(url); setIsImgToolOpen(false); }
         setHasUnsavedChanges(true);

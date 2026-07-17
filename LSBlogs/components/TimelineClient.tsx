@@ -49,7 +49,8 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
     const query = searchQuery.toLowerCase();
     return posts.filter(post =>
       post.title.toLowerCase().includes(query) ||
-      (post.description && post.description.toLowerCase().includes(query))
+      (post.description && post.description.toLowerCase().includes(query)) ||
+      post.tags?.some((tag: string) => tag.toLowerCase().includes(query))
     );
   }, [posts, searchQuery]);
 
@@ -90,7 +91,7 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
         <div className="relative w-full max-w-lg group" ref={searchContainerRef}>
           <input
             type="text"
-            placeholder="搜寻被封存的知识..."
+            placeholder="搜索标题、摘要或文章书签..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -130,6 +131,11 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
                         <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 leading-relaxed">
                           {post.description}
                         </p>
+                        {post.tags?.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {post.tags.map((tag: string) => <span key={tag} className="text-[9px] font-bold text-indigo-500">#{tag}</span>)}
+                          </div>
+                        )}
                       </Link>
                     ))}
                   </div>

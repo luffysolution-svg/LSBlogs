@@ -31,6 +31,7 @@ function SettingsContent() {
     avatarUrl: siteConfig.avatarUrl || "",
     social: siteConfig.social || {},
     cloudMusicIds: [...(siteConfig.cloudMusicIds || [])],
+    musicAudioUrls: { ...(siteConfig.musicAudioUrls || {}) },
     bgImages: [...(siteConfig.bgImages || [])],
     githubComments: siteConfig.githubComments || {
       repo: 'luffysolution-svg/luffy.github.io',
@@ -70,6 +71,7 @@ function SettingsContent() {
             buildDate: data.data.buildDate || prev.buildDate,
             icpConfig: data.data.icpConfig || prev.icpConfig,
             footerBadges: data.data.footerBadges ? [...data.data.footerBadges] : prev.footerBadges,
+            musicAudioUrls: { ...(prev.musicAudioUrls || {}), ...(data.data.musicAudioUrls || {}) },
             // 👇 🌟 合并后端发来的小猫配置
             geminiConfig: { ...(prev.geminiConfig || {}), ...(data.data.geminiConfig || {}) }
           }));
@@ -233,7 +235,6 @@ function SettingsContent() {
     </div>
   );
 }
-
 export default function SettingsPage() {
   return (
     <ToastProvider>

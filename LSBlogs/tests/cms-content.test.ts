@@ -1,11 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  draftToMarkdown,
   parseSiteConfig,
   parseTypescriptArray,
   serializeAlbums,
   serializeSiteConfig,
 } from "../lib/cms/content";
+
+test("writes multiple normalized article bookmarks to frontmatter", () => {
+  const document = draftToMarkdown({
+    type: "post",
+    id: "tagged-post",
+    title: "Tagged",
+    tags: ["#React", " React ", "Next.js", ""],
+    content: "<p>Body</p>",
+  });
+
+  assert.match(document.content, /tags:\n\s+- "React"\n\s+- "Next\.js"/);
+});
 
 test("reads a generated site config after its type declaration", () => {
   const source = serializeSiteConfig({

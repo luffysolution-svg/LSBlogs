@@ -109,20 +109,29 @@ async function currentConfig(state: CmsState): Promise<Record<string, unknown>> 
 }
 
 async function queryMusic(id: string) {
-  const response = await fetch(
-    `https://music.163.com/api/song/detail/?id=${encodeURIComponent(id)}&ids=[${encodeURIComponent(id)}]`,
-    {
+  const requestOptions = {
       headers: {
         "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 Chrome/121 Safari/537.36",
         Referer: "https://music.163.com/",
       },
       signal: AbortSignal.timeout(6_000),
       cache: "no-store",
-    },
-  );
+    } as const;
+  const [response, playerResponse] = await Promise.all([
+    fetch(
+      `https://music.163.com/api/song/detail/?id=${encodeURIComponent(id)}&ids=[${encodeURIComponent(id)}]`,
+      requestOptions,
+    ),
+    fetch(
+      `https://music.163.com/api/song/enhance/player/url?id=${encodeURIComponent(id)}&ids=[${encodeURIComponent(id)}]&br=320000`,
+      requestOptions,
+    ).catch(() => null),
+  ]);
   const data = await response.json();
   const song = data.songs?.[0];
   if (!song) return { success: false, message: "未找到该歌曲，可能是 VIP 歌曲或 ID 错误" };
+  const playerData = playerResponse?.ok ? await playerResponse.json().catch(() => null) : null;
+  const playable = Boolean(playerData?.data?.[0]?.url);
   return {
     success: true,
     data: {
@@ -131,6 +140,7 @@ async function queryMusic(id: string) {
       artist: song.artists?.[0]?.name || "未知歌手",
       album: song.album?.name || "",
       cover: song.album?.picUrl || "",
+      playable,
     },
   };
 }

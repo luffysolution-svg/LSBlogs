@@ -41,7 +41,6 @@ type ContentResponse = {
 async function getApiBase() {
   return '/api/cms';
 }
-
 export default function AdminDashboard() {
   const { showToast } = useToast();
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -199,7 +198,11 @@ export default function AdminDashboard() {
                     <p className="mt-1 line-clamp-1 text-xs text-slate-500">{item.description || item.id}</p>
                   </div>
                   <div className="flex gap-2">
-                    {item.type !== 'moment' && <Link href={`/admin/editor?id=${encodeURIComponent(item.id)}&type=${item.type}`} className="flex items-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 py-2 text-xs font-black text-indigo-600 transition hover:bg-indigo-500 hover:text-white"><Pencil size={14} />编辑</Link>}
+                    {item.type === 'moment' ? (
+                      <Link href={`/admin/moments?edit=${encodeURIComponent(item.id)}`} className="flex items-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 py-2 text-xs font-black text-indigo-600 transition hover:bg-indigo-500 hover:text-white"><Pencil size={14} />编辑</Link>
+                    ) : (
+                      <Link href={`/admin/editor?id=${encodeURIComponent(item.id)}&type=${item.type}`} className="flex items-center gap-1.5 rounded-xl bg-indigo-500/10 px-3 py-2 text-xs font-black text-indigo-600 transition hover:bg-indigo-500 hover:text-white"><Pencil size={14} />编辑</Link>
+                    )}
                     <button onClick={() => deleteItem(item)} className="flex items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-500 transition hover:bg-red-500 hover:text-white"><Trash2 size={14} />删除</button>
                   </div>
                 </motion.article>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { MapPin, MessageSquare, Clock, Sparkles, Search, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Plus, Image as ImageIcon, X, Send, Link as LinkIcon, Zap, Trash2, AlertTriangle } from 'lucide-react';
+import { MapPin, MessageSquare, Clock, Sparkles, Search, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost, Plus, Image as ImageIcon, X, Send, Link as LinkIcon, Zap, Trash2, AlertTriangle, Pencil } from 'lucide-react';
 import MomentComments from '../../../components/MomentComments';
 import { useToast } from '../../../components/ToastProvider';
 import { useOperations } from '../../../context/OperationContext';
@@ -17,7 +17,7 @@ function timeAgo(dateStr: string) {
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
 }
 
-export default function MomentList({ moments, authorName, avatarUrl }: any) {
+export default function MomentList({ moments, authorName, avatarUrl, initialEditId = null }: any) {
   const [liveMoments, setLiveMoments] = useState<any[]>(moments || []);
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,10 +29,12 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
 
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [newMoment, setNewMoment] = useState({ content: '', location: '', images: [] as string[] });
+  const [editingMoment, setEditingMoment] = useState<{ id: string; date: string; opId?: string } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const openedInitialEditRef = useRef<string | null>(null);
   const [imageUrlInput, setImageUrlInput] = useState('');
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -53,6 +55,16 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
     loadMoments();
   }, []);
 
+  useEffect(() => {
+    if (!initialEditId || openedInitialEditRef.current === initialEditId) return;
+    const target = liveMoments.find(moment => moment.id === initialEditId);
+    if (!target) return;
+    openedInitialEditRef.current = initialEditId;
+    setEditingMoment({ id: target.id, date: target.date });
+    setNewMoment({ content: target.content || '', location: target.location || '', images: target.images || [] });
+    setIsPublishOpen(true);
+  }, [initialEditId, liveMoments]);
+
   const processedMoments = useMemo(() => {
     const baseMoments = [...liveMoments];
 
@@ -65,7 +77,8 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
         isPending: true
       }));
 
-    let result = [...pendingMoments, ...baseMoments];
+    const pendingIds = new Set(pendingMoments.map(moment => moment.id));
+    let result = [...pendingMoments, ...baseMoments.filter(moment => !pendingIds.has(moment.id))];
 
     if (searchQuery.trim()) {
       const query = searchQuery.trim().toLowerCase();
@@ -138,27 +151,47 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
     }
   };
 
+  const createMomentPayload = () => ({
+    id: editingMoment?.id || `moment-${Date.now()}`,
+    date: editingMoment?.date || new Date().toISOString(),
+    content: newMoment.content,
+    location: newMoment.location,
+    images: newMoment.images
+  });
+
+  const closeMomentEditor = () => {
+    setIsPublishOpen(false);
+    setEditingMoment(null);
+    setNewMoment({ content: '', location: '', images: [] });
+  };
+
+  const openNewMomentEditor = () => {
+    setEditingMoment(null);
+    setNewMoment({ content: '', location: '', images: [] });
+    setIsPublishOpen(true);
+  };
+
+  const handleEditClick = (moment: any) => {
+    setEditingMoment({ id: moment.id, date: moment.date, opId: moment.opId });
+    setNewMoment({ content: moment.content || '', location: moment.location || '', images: moment.images || [] });
+    setIsPublishOpen(true);
+  };
+
   const handleQueueMoment = () => {
     if (!newMoment.content.trim()) {
       showToast("内容不能为空哦！", "warning");
       return;
     }
-    const payload = {
-      id: `moment-${Date.now()}`,
-      date: new Date().toISOString(),
-      content: newMoment.content,
-      location: newMoment.location,
-      images: newMoment.images
-    };
+    const payload = createMomentPayload();
+    if (editingMoment?.opId) removeOperation(editingMoment.opId);
     addOperation({
       type: 'create_moment',
-      label: `[发布说说] ${newMoment.content.slice(0, 12)}...`,
-      description: '将说说写入正式博客',
+      label: `[${editingMoment ? '修改' : '发布'}说说] ${newMoment.content.slice(0, 12)}...`,
+      description: editingMoment ? '更新正式博客中的说说' : '将说说写入正式博客',
       payload
     });
     showToast("✅ 队列保存成功！\n请点击右上角导航栏的 📥 收件箱保存到云端", "success");
-    setIsPublishOpen(false);
-    setNewMoment({ content: '', location: '', images: [] });
+    closeMomentEditor();
   };
 
   const handleDirectPublish = async () => {
@@ -170,13 +203,8 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
     showToast("🚀 正在保存到云端发布区...", "info");
 
     try {
-      const payload = {
-        id: `moment-${Date.now()}`,
-        date: new Date().toISOString(),
-        content: newMoment.content,
-        location: newMoment.location,
-        images: newMoment.images
-      };
+      const payload = createMomentPayload();
+      const wasEditing = Boolean(editingMoment);
       const apiUrl = '/api/cms/moments/save';
 
       const res = await fetch(apiUrl, {
@@ -190,9 +218,11 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       const data = await res.json();
       if (data.success) {
         showToast("🎉 已写入云端发布区，确认发布后上线", "success");
-        setLiveMoments(current => [payload, ...current]);
-        setIsPublishOpen(false);
-        setNewMoment({ content: '', location: '', images: [] });
+        setLiveMoments(current => wasEditing && current.some(moment => moment.id === payload.id)
+          ? current.map(moment => moment.id === payload.id ? payload : moment)
+          : [payload, ...current]);
+        if (editingMoment?.opId) removeOperation(editingMoment.opId);
+        closeMomentEditor();
       } else {
         showToast(`⚠️ 后端拒绝了请求：${data.message}`, "error");
       }
@@ -295,13 +325,10 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
         </div>
       )}
 
-      {/* 悬浮删除按钮 */}
-      <button
-        onClick={() => handleDeleteClick(moment)}
-        className={`absolute ${moment.isPending ? 'top-10' : 'top-6'} right-6 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-sm z-10`}
-      >
-        <Trash2 size={14} />
-      </button>
+      <div className={`absolute ${moment.isPending ? 'top-10' : 'top-6'} right-6 z-10 flex gap-2 opacity-0 transition-all duration-300 group-hover:opacity-100 group-focus-within:opacity-100`}>
+        <button onClick={() => handleEditClick(moment)} aria-label="编辑说说" className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 shadow-sm transition hover:bg-indigo-500 hover:text-white"><Pencil size={14} /></button>
+        <button onClick={() => handleDeleteClick(moment)} aria-label="删除说说" className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/10 text-red-500 shadow-sm transition hover:bg-red-500 hover:text-white"><Trash2 size={14} /></button>
+      </div>
 
       <div className={`flex items-center gap-4 mb-8 pb-6 border-b border-slate-200/50 dark:border-slate-700/50 relative ${moment.isPending ? 'mt-4' : ''}`}>
         <div className="w-14 h-14 shrink-0 rounded-2xl overflow-hidden shadow-md border-2 border-white dark:border-slate-700">
@@ -350,7 +377,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
 
       <div className="mb-16 flex flex-col items-center gap-8">
         <button
-          onClick={() => setIsPublishOpen(true)}
+          onClick={openNewMomentEditor}
           className="group relative px-10 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg shadow-indigo-500/30 text-white font-black tracking-widest text-sm hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 overflow-hidden"
         >
           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
@@ -421,9 +448,9 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
 
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-                  <Sparkles className="text-indigo-500" /> 记录新瞬间
+                  <Sparkles className="text-indigo-500" /> {editingMoment ? '修改这条说说' : '记录新瞬间'}
                 </h2>
-                <button onClick={() => setIsPublishOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-red-500 transition-colors">
+                <button onClick={closeMomentEditor} className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-red-500 transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -509,7 +536,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
               )}
 
               <div className="flex flex-wrap gap-3 mt-auto pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
-                <button onClick={() => setIsPublishOpen(false)} className="flex-1 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-widest text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                <button onClick={closeMomentEditor} className="flex-1 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-widest text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
                   取消
                 </button>
 
@@ -518,7 +545,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
                   disabled={isUploading || isSubmitting}
                   className="flex-[1.5] py-4 px-2 rounded-2xl bg-slate-800 text-white font-black uppercase tracking-[0.1em] text-xs shadow-lg hover:bg-slate-900 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <Send size={16} /> 加入队列
+                  <Send size={16} /> {editingMoment ? '暂存修改' : '加入队列'}
                 </button>
 
                 <button
@@ -527,7 +554,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
                   className="flex-[2] py-4 px-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black uppercase tracking-[0.2em] text-[13px] shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? <Clock className="animate-spin" size={18} /> : <Zap size={18} className="fill-current text-yellow-300" />}
-                  立即发布
+                  {editingMoment ? '保存修改' : '立即发布'}
                 </button>
               </div>
 

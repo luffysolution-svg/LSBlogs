@@ -88,16 +88,17 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         const rawResults = await res.json();
 
         const mergedPlaylist = rawResults
-          .filter((song: any) => song && song.url && !song.error)
+          .filter((song: any) => song && song.id)
           .map((song: any) => ({
             id: song.id || Math.random().toString(),
             title: song.name || '未知歌曲',
             artist: song.artist || song.author || '未知歌手',
             cover: song.cover || song.pic || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
-            src: song.url,
+            src: siteConfig.musicAudioUrls?.[String(song.id)]?.trim() || song.url,
             lrcUrl: null,
             lyrics: song.lrc ? parseLrc(song.lrc) : []
-          }));
+          }))
+          .filter((song: any) => Boolean(song.src));
 
         if (isMounted) {
           if (mergedPlaylist.length > 0) setPlaylist(mergedPlaylist);

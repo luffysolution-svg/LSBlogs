@@ -27,6 +27,7 @@ export const siteConfig = {
   defaultPostCover: "/images/generated/default-post-cover.webp",
   photoWallImage: "/images/backgrounds/bg-02-reze.webp",
   cloudMusicIds: [],
+  musicAudioUrls: {} as Record<string, string>,
   social: {
     github: "",
     gitee: "",

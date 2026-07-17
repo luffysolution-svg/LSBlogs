@@ -11,7 +11,8 @@ export const metadata = {
   description: "生活动态与瞬间记录",
 };
 
-export default function MomentsPage() {
+export default async function MomentsPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
+  const { edit } = await searchParams;
   let allMoments: any[] = [];
 
   try {
@@ -54,6 +55,7 @@ export default function MomentsPage() {
           moments={allMoments}
           authorName={siteConfig.authorName}
           avatarUrl={siteConfig.avatarUrl}
+          initialEditId={edit || null}
         />
       </PageTransition>
     </div>

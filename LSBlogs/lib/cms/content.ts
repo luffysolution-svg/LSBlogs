@@ -64,10 +64,13 @@ export function draftToMarkdown(draft: CmsDraft): { id: string; path: string; co
       ? `${date} ${new Date().toTimeString().slice(0, 8)}`
       : date
     : new Date().toISOString().replace("T", " ").slice(0, 19);
+  const tags = Array.isArray(draft.tags)
+    ? [...new Set(draft.tags.map((tag) => String(tag).trim().replace(/^#+/, "")).filter(Boolean))]
+    : [];
   const data = {
     title: String(draft.title || ""),
     date: finalDate,
-    tags: Array.isArray(draft.tags) ? draft.tags.map(String) : [],
+    tags,
     mood: String(draft.mood || ""),
     cover: String(draft.cover || ""),
     description: String(draft.description || ""),
@@ -225,6 +228,7 @@ export type SiteConfig = {
   defaultPostCover: string;
   photoWallImage: string;
   cloudMusicIds: string[];
+  musicAudioUrls: Record<string, string>;
   social: Record<string, string>;
   counts: { photos: number };
   chatterTitle: string;

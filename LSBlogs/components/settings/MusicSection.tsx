@@ -10,9 +10,11 @@ export default function MusicSection({ formData, handleUpdate, pushToQueue, musi
           <div className="max-h-[400px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
             {formData.cloudMusicIds.map((id: string, index: number) => {
               const detail = musicDetails[id];
+              const audioUrl = formData.musicAudioUrls?.[id] || '';
               return (
-                <div key={index} className="flex justify-between items-center p-3 bg-white/40 dark:bg-slate-800/40 rounded-2xl border border-white/20 group">
-                  <div className="flex items-center gap-3">
+                <div key={id} className="flex flex-col gap-3 p-3 bg-white/40 dark:bg-slate-800/40 rounded-2xl border border-white/20 group">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                     {detail?.cover ? (
                       <img src={detail.cover} alt="cover" className="w-10 h-10 rounded-lg object-cover shadow-sm" />
                     ) : (
@@ -29,8 +31,22 @@ export default function MusicSection({ formData, handleUpdate, pushToQueue, musi
                       )}
                       <span className="text-[10px] font-mono text-pink-500 mt-0.5">#{id}</span>
                     </div>
-                  </div>
+                    </div>
                   <button onClick={() => removeSong(index)} className="w-8 h-8 shrink-0 rounded-lg bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white flex items-center justify-center">✕</button>
+                  </div>
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between text-[9px] font-bold">
+                      <span className="text-slate-400">备用音频 URL（可填 /music/xxx.mp3）</span>
+                      {detail && <span className={detail.playable ? 'text-emerald-500' : audioUrl ? 'text-indigo-500' : 'text-amber-500'}>{detail.playable ? '网易音频可用' : audioUrl ? '使用备用音频' : '网易音频受限'}</span>}
+                    </div>
+                    <input
+                      type="url"
+                      value={audioUrl}
+                      onChange={event => handleUpdate('musicAudioUrls', { ...(formData.musicAudioUrls || {}), [id]: event.target.value })}
+                      placeholder="https://你的对象存储/歌曲.mp3"
+                      className="w-full rounded-xl border border-white/20 bg-white/60 px-3 py-2 text-[10px] text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-950/40 dark:text-slate-200"
+                    />
+                  </div>
                 </div>
               );
             })}
@@ -52,7 +68,7 @@ export default function MusicSection({ formData, handleUpdate, pushToQueue, musi
                 <div className="flex items-center gap-3">
                   <img src={queryResult.cover} alt="cover" className="w-10 h-10 rounded-lg object-cover" />
                   <div>
-                    <p className="text-[10px] font-black text-green-600">获取成功</p>
+                    <p className={`text-[10px] font-black ${queryResult.playable ? 'text-green-600' : 'text-amber-500'}`}>{queryResult.playable ? '歌曲与音频均可用' : '歌曲已找到，但网易音频受限'}</p>
                     <p className="text-xs font-bold line-clamp-1">{queryResult.name}</p>
                   </div>
                 </div>
@@ -60,6 +76,8 @@ export default function MusicSection({ formData, handleUpdate, pushToQueue, musi
               </motion.div>
             )}
           </AnimatePresence>
+
+          <p className="rounded-2xl bg-amber-500/10 px-4 py-3 text-[10px] leading-5 text-amber-700 dark:text-amber-300">网易受限歌曲不会再进入前台播放器。若你拥有音频使用权，可把 MP3 放入 public/music 后填写 /music/文件名.mp3，或填写对象存储的 HTTPS 地址；歌名、封面和歌词仍由网易 ID 提供。</p>
 
           {/* 【核心修复】：加上了真正的更新 key (cloudMusicIds) 和新数组 */}
           <button
